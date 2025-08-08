@@ -1,26 +1,67 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+} from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { API_URL } from "@env";
 
 export default function Login({ navigation }) {
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
 
+  const handleLogin = async () => {
+    if (!email || !senha) {
+      Alert.alert("Erro", "Preencha todos os campos!");
+      return;
+    }
+
+    try {
+      const response = await axios.post(API_URL, {
+        email,
+        senha,
+      });
+
+      if (response.status === 200) {
+        const { token, organizador } = response.data;
+        console.log("Usuário logado:", organizador);
+        navigation.navigate("PagInicial");
+      }
+    } catch (error) {
+      console.error("Erro no login:", error);
+      if (error.response?.data?.message) {
+        Alert.alert("Erro", error.response.data.message);
+      } else {
+        Alert.alert("Erro", "Erro ao fazer login.");
+      }
+    }
+  };
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/Logo4easy.jpeg')} style={styles.logo} />
+      <Image source={require("../assets/Logo4easy.jpeg")} style={styles.logo} />
 
       <View style={styles.tabContainer}>
-        <Text style={styles.activeTab}>LOGIN</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
+        <Text style={styles.activeTab} onPress={handleLogin}>
+          LOGIN
+        </Text>
+        <TouchableOpacity onPress={() => navigation.navigate("Cadastro")}>
           <Text style={styles.inactiveTab}>CADASTRAR</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.inputContainer}>
-        <MaterialIcons name="email" size={20} color="#888" style={styles.icon} />
+        <MaterialIcons
+          name="email"
+          size={20}
+          color="#888"
+          style={styles.icon}
+        />
         <TextInput
           style={styles.input}
           placeholder="EMAIL"
@@ -42,19 +83,19 @@ export default function Login({ navigation }) {
         />
       </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate('PagInicial')}>
-        <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.button}>
+      <TouchableOpacity onPress={() => navigation.navigate("PagInicial")}>
+        <LinearGradient colors={["#4f46e5", "#3b82f6"]} style={styles.button}>
           <Text style={styles.buttonText}>LOGIN</Text>
         </LinearGradient>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate('EsquecerSenha')}>
+      <TouchableOpacity onPress={() => navigation.navigate("EsquecerSenha")}>
         <Text style={styles.footer}>
           <Text style={styles.link}>Esqueci a senha</Text>
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Cadastro')}>
+      <TouchableOpacity onPress={() => navigation.navigate("Cadastro")}>
         <Text style={styles.footer}>
           Não possui uma conta? <Text style={styles.link}>Cadastre-se</Text>
         </Text>
@@ -66,45 +107,45 @@ export default function Login({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   logo: {
     width: 200,
     height: 150,
-    resizeMode: 'contain',
+    resizeMode: "contain",
     marginBottom: 20,
   },
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 30,
   },
   activeTab: {
-    fontFamily: 'MontserratBold',
+    fontFamily: "MontserratBold",
     marginHorizontal: 20,
     fontSize: 16,
-    color: '#4f46e5',
+    color: "#4f46e5",
     borderBottomWidth: 2,
-    borderBottomColor: '#4f46e5',
+    borderBottomColor: "#4f46e5",
     paddingBottom: 5,
   },
   inactiveTab: {
-    fontFamily: 'Montserrat',
+    fontFamily: "Montserrat",
     marginHorizontal: 20,
     fontSize: 16,
-    color: '#aaa',
+    color: "#aaa",
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: '#ddd',
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#ddd",
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 10,
     marginBottom: 20,
-    width: '100%',
+    width: "100%",
   },
   icon: {
     marginRight: 10,
@@ -112,29 +153,29 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 45,
-    fontFamily: 'Montserrat',
-    color: '#333',
+    fontFamily: "Montserrat",
+    color: "#333",
   },
   button: {
-    width: '100%',
+    width: "100%",
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 15,
-    padding:10,
+    padding: 10,
   },
   buttonText: {
-    fontFamily: 'MontserratBold',
-    color: 'white',
+    fontFamily: "MontserratBold",
+    color: "white",
     fontSize: 16,
   },
   footer: {
-    fontFamily: 'Montserrat',
-    color: '#666',
+    fontFamily: "Montserrat",
+    color: "#666",
     fontSize: 14,
   },
   link: {
-    color: '#4f46e5',
-    fontWeight: 'bold',
+    color: "#4f46e5",
+    fontWeight: "bold",
   },
 });

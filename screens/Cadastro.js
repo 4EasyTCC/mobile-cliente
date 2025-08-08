@@ -6,42 +6,77 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { API_URL } from "@env";
+import axios from "axios";
 
-const handleCadastro = async () => {
-  if (!nome || !email || !senha) {
-    Alert.alert("Erro", "Preencha todos os campos!");
-    return;
-  }
-
-  try {
-    const response = await axios.post(API_URL, {
-      nome,
-      email,
-      senha,
-    });
-
-    if (response.status === 201) {
-      Alert.alert("Sucesso", "Cadastro realizado com sucesso!");
-      navigation.navigate("Login");
-    }
-  } catch (error) {
-    console.error("Erro ao cadastrar:", error);
-    if (error.response?.data?.message) {
-      Alert.alert("Erro", error.response.data.message);
-    } else {
-      Alert.alert("Erro", "Erro ao realizar cadastro.");
-    }
-  }
-};
+function validarEmail(email) {
+  const re = /\S+@\S+\.\S+/;
+  return re.test(email);
+}
 
 export default function Cadastro({ navigation }) {
   const [nome, setNome] = useState("");
+  const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+
+  const handleCadastro = async () => {
+    console.log("Botão de cadastro pressionado");
+
+    if (!nome || !cpf || !email || !senha) {
+      Alert.alert("Erro", "Preencha todos os campos!");
+      return;
+    }
+
+    if (!validarEmail(email)) {
+      Alert.alert("Erro", "Email inválido!");
+      return;
+    }
+
+    if (senha.length < 6) {
+      Alert.alert("Erro", "Senha deve ter ao menos 6 caracteres");
+      return;
+    }
+    try {
+      console.log("API_URL:", API_URL);
+      const response = await axios.post(`${API_URL}/cadastro/convidado`, {
+        nome,
+        cpf,
+        email,
+        senha,
+      });
+
+      console.log("Resposta do backend:", response.data);
+
+      if (response.status === 201) {
+        Alert.alert("Sucesso", "Cadastro realizado com sucesso!");
+        navigation.navigate("Login");
+      }
+    } catch (error) {
+      console.error("Erro ao cadastrar:", error);
+
+      if (error.response?.data?.message) {
+        Alert.alert("Erro", error.response.data.message);
+      } else {
+        Alert.alert("Erro", "Erro ao realizar cadastro.");
+      }
+    }
+  };
+  function formatarCPF(value) {
+    let v = value.replace(/\D/g, "");
+
+    v = v.slice(0, 11);
+
+    v = v.replace(/(\d{3})(\d)/, "$1.$2");
+    v = v.replace(/(\d{3})(\d)/, "$1.$2");
+    v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
+    return v;
+  }
 
   return (
     <View style={styles.container}>
@@ -51,9 +86,7 @@ export default function Cadastro({ navigation }) {
         <TouchableOpacity onPress={() => navigation.navigate("Login")}>
           <Text style={styles.inactiveTab}>LOGIN</Text>
         </TouchableOpacity>
-        <Text style={styles.activeTab} onPress={() => handleCadastro}>
-          CADASTRAR
-        </Text>
+        <Text style={styles.activeTab}>CADASTRAR</Text>
       </View>
 
       <View style={styles.inputContainer}>
@@ -74,6 +107,24 @@ export default function Cadastro({ navigation }) {
 
       <View style={styles.inputContainer}>
         <MaterialIcons
+          name="badge"
+          size={20}
+          color="#888"
+          style={styles.icon}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="CPF"
+          placeholderTextColor="#aaa"
+          keyboardType="numeric"
+          value={cpf}
+          onChangeText={(text) => setCpf(formatarCPF(text))}
+          maxLength={14}
+        />
+      </View>
+
+      <View style={styles.inputContainer}>
+        <MaterialIcons
           name="email"
           size={20}
           color="#888"
@@ -83,6 +134,8 @@ export default function Cadastro({ navigation }) {
           style={styles.input}
           placeholder="EMAIL"
           placeholderTextColor="#aaa"
+          keyboardType="email-address"
+          autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
         />
@@ -100,7 +153,7 @@ export default function Cadastro({ navigation }) {
         />
       </View>
 
-      <TouchableOpacity>
+      <TouchableOpacity onPress={handleCadastro}>
         <LinearGradient colors={["#4f46e5", "#3b82f6"]} style={styles.button}>
           <Text style={styles.buttonText}>CADASTRAR</Text>
         </LinearGradient>
