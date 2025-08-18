@@ -29,8 +29,9 @@ export default function MeusEventos({ navigation }) {
         />
         <Icon
           name="account-circle-outline"
-          size={36}
-          color="#4B4BE0"
+          size={60}
+          color="#4525a4"
+          marginRight="20"
           onPress={() => navigation.navigate('Perfil')}
         />
       </View>
@@ -50,14 +51,14 @@ export default function MeusEventos({ navigation }) {
                   }
                 }}
               />
-              <Icon name="magnify" size={24} color="#666" style={styles.searchIcon} />
+              <Icon name="magnify" size={24} color="#4525a4" style={styles.searchIcon} />
             </View>
 
       {/* Conteúdo principal com gradiente */}
       <LinearGradient
-        colors={['#4B4BE0', '#7F4DE3']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
+        colors={['#4525a4', '#1868fd' ]}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 0, y: 0 }}
         style={styles.gradientBox}
       >
         <Text style={styles.sectionTitle}>Meus eventos</Text>
@@ -118,8 +119,8 @@ function Carousel({ title }) {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 50,
-    paddingHorizontal: 20,
-    backgroundColor: '#F7F6FB',
+    backgroundColor: '#FFF',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -127,15 +128,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 80,
-    height: 40,
+    width: 130,
+    height: 90,
   },
   searchContainer: {
-    marginTop: 24,
+    marginHorizontal: 20,
   },
   searchInput: {
     backgroundColor: '#EAEAEA',
-    borderRadius: 20,
+    borderRadius: 10,
     paddingLeft: 16,
     paddingRight: 44,
     height: 40,
@@ -147,11 +148,9 @@ const styles = StyleSheet.create({
     top: 8,
   },
   gradientBox: {
-    borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 14,
     marginTop: 28,
-    marginBottom: 30,
   },
   carousel: {
     marginBottom: 16,

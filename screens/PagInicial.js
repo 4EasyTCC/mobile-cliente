@@ -29,7 +29,12 @@ export default function PaginaInicial({ navigation }) {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Icon name="account-circle-outline" size={36} color="#4B4BE0" onPress={() => navigation.navigate('Perfil')} />
+        <Icon name="account-circle-outline" 
+        size={60} 
+        color="#4525a4"
+        marginRight="20"
+        onPress={() => navigation.navigate('Perfil')} 
+        />
       </View>
 
       {/* Barra de pesquisa -------------------------------------- */}
@@ -47,14 +52,14 @@ export default function PaginaInicial({ navigation }) {
             }
           }}
         />
-        <Icon name="magnify" size={24} color="#666" style={styles.searchIcon} />
+        <Icon name="magnify" size={24} color="#4525a4" style={styles.searchIcon} />
       </View>
 
       {/* Gradiente + carrosséis --------------------------------- */}
       <LinearGradient
-        colors={['#4B4BE0', '#7F4DE3']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
+        colors={['#4525a4', '#1868fd']}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 0, y: 0 }}
         style={styles.gradientBox}
       >
         {/* Eventos abertos */}
@@ -83,7 +88,14 @@ export default function PaginaInicial({ navigation }) {
       </View>
 
       <View style={styles.filterRow}>
-        {['Shows', 'Festas', 'Jogos', 'Esportivo', 'Cultural', 'Outros'].map((item) => (
+        {['Shows', 'Festas', 'Jogos'].map((item) => (
+          <TouchableOpacity key={item} style={styles.filterButton}>
+            <Text style={styles.filterText}>{item}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={styles.filterRow}>
+        {['Esportivo', 'Cultural', 'Outros'].map((item) => (
           <TouchableOpacity key={item} style={styles.filterButton}>
             <Text style={styles.filterText}>{item}</Text>
           </TouchableOpacity>
@@ -96,11 +108,14 @@ export default function PaginaInicial({ navigation }) {
 /* ---------------------- COMPONENTE CARROSSEL ------------- */
 function Carousel({ title, navigation, loadMoreRoute }) {
   const scrollRef = useRef(null);
+  const scrollPosition = useRef(0);
 
   /* Função para rolar com as setas */
   const scrollBy = (distance) => {
     if (!scrollRef.current) return;
-    scrollRef.current.scrollTo({ x: distance, animated: true });
+    scrollPosition.current += distance;
+    if (scrollPosition.current < 0) scrollPosition.current = 0;
+    scrollRef.current.scrollTo({ x: scrollPosition.current, animated: true });
   };
 
   return (
@@ -109,7 +124,7 @@ function Carousel({ title, navigation, loadMoreRoute }) {
 
       <View style={styles.carouselRow}>
         {/* Seta esquerda */}
-        <TouchableOpacity onPress={() => scrollBy(0)}>
+        <TouchableOpacity onPress={() => scrollBy(-CARD_WIDTH * 3)}>
           <Icon name="chevron-left" size={36} color="#FFF" />
         </TouchableOpacity>
 
@@ -119,6 +134,10 @@ function Carousel({ title, navigation, loadMoreRoute }) {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.cardsContainer}
+          onScroll={(event) => {
+            scrollPosition.current = event.nativeEvent.contentOffset.x;
+          }}
+          scrollEventThrottle={16}
         >
           {mockCards.map((_, i) => (
             <View key={i} style={styles.card} />
@@ -147,8 +166,8 @@ function Carousel({ title, navigation, loadMoreRoute }) {
 const styles = StyleSheet.create({
   container: {
     paddingTop: 50,
-    paddingHorizontal: 20,
-    backgroundColor: '#F7F6FB',
+    backgroundColor: '#FFF',
+    flex: 1,
   },
 
   /* Cabeçalho */
@@ -157,13 +176,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logo: { width: 80, height: 40 },
+
+  logo: { 
+    width: 130, 
+    height: 90,
+  },
 
   /* Busca */
-  searchContainer: { marginTop: 24 },
+  searchContainer: {
+    marginHorizontal: 20,
+  },
+
   searchInput: {
     backgroundColor: '#EAEAEA',
-    borderRadius: 20,
+    borderRadius: 10,
     paddingLeft: 16,
     paddingRight: 44,
     height: 40,
@@ -173,7 +199,6 @@ const styles = StyleSheet.create({
 
   /* Gradiente */
   gradientBox: {
-    borderRadius: 16,
     paddingVertical: 18,
     paddingHorizontal: 14,
     marginTop: 28,
@@ -215,15 +240,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 28,
   },
-  filterTitle: { color: '#4B4BE0', fontWeight: '600' },
-  filterRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 12 },
+  filterTitle: { 
+    color: '#4525a4', 
+    fontWeight: '600', 
+    marginHorizontal: 10,
+  },
+  filterRow: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    marginTop: 12, 
+    marginHorizontal: 10,
+    justifyContent: 'center',  
+  },
   filterButton: {
-    backgroundColor: '#4B4BE0',
+    backgroundColor: '#4525a4',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 10,
     marginRight: 8,
     marginBottom: 8,
   },
-  filterText: { color: '#FFF', fontSize: 13 },
+  filterText: { 
+    color: '#FFF', 
+    fontSize: 13,
+   },
 });

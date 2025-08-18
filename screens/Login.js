@@ -59,7 +59,7 @@ export default function Login({ navigation }) {
         <MaterialIcons
           name="email"
           size={20}
-          color="#888"
+          color="#4525a4"
           style={styles.icon}
         />
         <TextInput
@@ -72,7 +72,12 @@ export default function Login({ navigation }) {
       </View>
 
       <View style={styles.inputContainer}>
-        <MaterialIcons name="lock" size={20} color="#888" style={styles.icon} />
+        <MaterialIcons 
+        name="lock" 
+        size={20} 
+        color="#4525a4" 
+        style={styles.icon} 
+        />
         <TextInput
           style={styles.input}
           placeholder="SENHA"
@@ -84,7 +89,12 @@ export default function Login({ navigation }) {
       </View>
 
       <TouchableOpacity onPress={() => navigation.navigate("PagInicial")}>
-        <LinearGradient colors={["#4f46e5", "#3b82f6"]} style={styles.button}>
+        <LinearGradient 
+        colors={['#4525a4', '#1868fd']} 
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 0 }}
+        style={styles.button}
+        >
           <Text style={styles.buttonText}>LOGIN</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -107,14 +117,14 @@ export default function Login({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFF",
     paddingHorizontal: 30,
     justifyContent: "center",
     alignItems: "center",
   },
   logo: {
-    width: 200,
-    height: 150,
+    width: 250,
+    height: 200,
     resizeMode: "contain",
     marginBottom: 20,
   },
@@ -126,9 +136,9 @@ const styles = StyleSheet.create({
     fontFamily: "MontserratBold",
     marginHorizontal: 20,
     fontSize: 16,
-    color: "#4f46e5",
+    color: "#4525a4",
     borderBottomWidth: 2,
-    borderBottomColor: "#4f46e5",
+    borderBottomColor: "#4525a4",
     paddingBottom: 5,
   },
   inactiveTab: {
@@ -158,8 +168,9 @@ const styles = StyleSheet.create({
   },
   button: {
     width: "100%",
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 15,
+    paddingHorizontal: 120,
+    borderRadius: 10,
     alignItems: "center",
     marginBottom: 15,
     padding: 10,
@@ -175,7 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   link: {
-    color: "#4f46e5",
+    color: "#007aff",
     fontWeight: "bold",
   },
 });
