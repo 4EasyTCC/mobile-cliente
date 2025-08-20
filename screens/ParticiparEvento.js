@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,66 +7,136 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function ParticiparEvento() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [statusEvento, setStatusEvento] = useState('Não Participa'); 
+  const scrollRef = useRef(null);
+  const { width: screenWidth } = Dimensions.get('window');
+
+  const carouselItems = [
+    { id: '1', image: require('../assets/show.jpg') },
+    { id: '2', image: require('../assets/show.jpg') },
+    { id: '3', image: require('../assets/show.jpg') },
+  ];
+
+  const handleScroll = (event) => {
+    const contentOffset = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffset / (screenWidth - 60));
+    setCurrentIndex(index);
+  };
+
+  const scrollToIndex = (index) => {
+    scrollRef.current?.scrollToOffset({
+      offset: index * (screenWidth - 60),
+      animated: true,
+    });
+  };
+
+  // 🔹 Função para renderizar botão conforme status
+  const renderBotaoAcao = () => {
+    let texto = '';
+    if (statusEvento === 'Não Participa') texto = 'Participar';
+    if (statusEvento === 'Participa') texto = 'Cancelar Inscrição';
+    if (statusEvento === 'Pendente') texto = 'Pagamento';
+
+    return (
+      <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.gradientButton}>
+        <TouchableOpacity 
+          style={styles.participarButton} 
+          onPress={() => console.log(`${texto} clicado`)}
+        >
+          <Text style={styles.buttonText}>{texto}</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-
+      {/* Cabeçalho */}
       <View style={styles.header}>
-      <Image source={require('../assets/Logo oficial.png')} style={styles.logo} />
+        <Image source={require('../assets/Logo oficial.png')} style={styles.logo} />
         <Icon name="person-circle-outline" size={32} color="#4B4BE0" />
       </View>
 
+      {/* Barra de busca */}
       <View style={styles.searchBar}>
         <TextInput placeholder="Buscar..." style={styles.searchInput} />
         <Icon name="search" size={24} color="#4B4BE0" />
       </View>
 
+      {/* Box do evento */}
+      <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.gradientBox}>
+        {/* Carrossel */}
+        <View style={styles.carouselContainer}>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            style={styles.carouselScroll}
+          >
+            {carouselItems.map((item) => (
+              <View key={item.id} style={[styles.carouselItem, { width: screenWidth - 60 }]}>
+                <Image 
+                  source={item.image} 
+                  style={styles.eventImage} 
+                  resizeMode="cover"
+                />
+              </View>
+            ))}
+          </ScrollView>
 
-      <View style={styles.imageSlider}>
-        <TouchableOpacity>
-          <Icon name="chevron-back" size={24} color="#4B4BE0" />
-        </TouchableOpacity>
-        <Text style={styles.imageText}>Imagens do evento</Text>
-        <TouchableOpacity>
-          <Icon name="chevron-forward" size={24} color="#4B4BE0" />
-        </TouchableOpacity>
-      </View>
+          <View style={styles.pagination}>
+            {carouselItems.map((_, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.paginationDot,
+                  index === currentIndex && styles.activeDot
+                ]}
+                onPress={() => scrollToIndex(index)}
+              />
+            ))}
+          </View>
+        </View>
 
-
-      <LinearGradient
-        colors={['#4B4BE0', '#6F86FF']}
-        style={styles.gradientBox}
-      >
+        {/* Infos básicas */}
         <Text style={styles.eventTitle}>Nome Do Evento</Text>
         <Text style={styles.eventDesc}>Descrição do evento</Text>
 
         <Text style={styles.info}>Endereço</Text>
         <Text style={styles.info}>Tipo de evento</Text>
-        <Text style={styles.info}>Status do Evento:</Text>
+        <Text style={styles.info}>Status do Evento: {statusEvento}</Text>
         <Text style={styles.info}>Restrições</Text>
         <Text style={styles.info}>Horários: Começa - Acaba</Text>
       </LinearGradient>
 
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.participarButton}>
-          <Text style={styles.buttonText}>Participar</Text>
-        </TouchableOpacity>
+        {/* Botão principal de ação (condicional) */}
+        {renderBotaoAcao()}
 
-        <View style={styles.precoBox}>
-          <Text style={styles.precoLabel}>Preço:</Text>
-          <View style={styles.precoTag}>
-            <Text style={styles.tagText}>Dono do evento</Text>
-          </View>
-        </View>
+        {/* Botão de chat */}
+        <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.gradientButton}>
+          <TouchableOpacity style={styles.participarButton} onPress={() => console.log("Chat aberto")}>
+            <Icon name="chatbubbles-outline" size={22} color="#fff" />
+            <Text style={[styles.buttonText, { marginLeft: 6 }]}>Chat</Text>
+          </TouchableOpacity>
+        </LinearGradient>
       </View>
     </ScrollView>
   );
 }
+
+
 const styles = StyleSheet.create({
   container: {
     padding: 20,
@@ -92,35 +162,63 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   searchInput: {
+    fontFamily: 'Montserrat',
     flex: 1,
     fontSize: 14,
     color: '#333',
   },
-  imageSlider: {
-    marginTop: 30,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  carouselContainer: {
+    marginTop: 20,
     alignItems: 'center',
-    elevation: 2,
   },
-  imageText: {
-    fontSize: 16,
-    color: '#4B4BE0',
-    fontWeight: '600',
+  carouselScroll: {
+    borderRadius: 10,
+  },
+  carouselItem: {
+    height: 250,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginRight: 10,
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: 'white',
+    width: 12,
   },
   gradientBox: {
     marginTop: 20,
     borderRadius: 15,
-    padding: 20,
+    padding: 15,
+  },
+  gradientButton: {
+    borderRadius: 15,
+    padding: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   eventTitle: {
+    fontFamily: 'Montserrat',
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
+    marginTop: 15,
     marginBottom: 8,
   },
   eventDesc: {
@@ -138,9 +236,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
   },
   participarButton: {
-    backgroundColor: '#4B4BE0',
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 10,
@@ -148,25 +248,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  precoBox: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-  },
-  precoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B4BE0',
-    marginBottom: 4,
-  },
-  precoTag: {
-    backgroundColor: '#ddd',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  tagText: {
-    fontSize: 12,
-    color: '#333',
+    textAlign: 'center',
   },
 });

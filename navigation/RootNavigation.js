@@ -11,6 +11,7 @@ import PagInicial from "../screens/PagInicial";
 import EventosAbertos from "../screens/EventosAbertos";
 import MeusEventos from "../screens/MeusEventos";
 import Pesquisa from "../screens/Pesquisa";
+import PaginaQrCode from "../screens/PaginaQrCode";
 const Stack = createStackNavigator();
 
 const RootNavigator = () => {
@@ -27,6 +28,7 @@ const RootNavigator = () => {
         <Stack.Screen name="FiltragemAvancada" component={FiltragemAvancada}></Stack.Screen>
         <Stack.Screen name="ParticiparEvento" component={ParticiparEvento}></Stack.Screen>
         <Stack.Screen name="PaginaPagamentos" component={PaginaPagamentos}></Stack.Screen>
+        <Stack.Screen name="PaginaQrCode" component={PaginaQrCode}></Stack.Screen>
         <Stack.Screen name="PagInicial" component={PagInicial}></Stack.Screen>
         <Stack.Screen name="EventosAbertos" component={EventosAbertos}></Stack.Screen>
         <Stack.Screen name="MeusEventos" component={MeusEventos}></Stack.Screen>
