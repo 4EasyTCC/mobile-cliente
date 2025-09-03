@@ -12,6 +12,8 @@ import EventosAbertos from "../screens/EventosAbertos";
 import MeusEventos from "../screens/MeusEventos";
 import Pesquisa from "../screens/Pesquisa";
 import PaginaQrCode from "../screens/PaginaQrCode";
+import Chat from "../screens/Chat"
+
 const Stack = createStackNavigator();
 
 const RootNavigator = () => {
@@ -19,7 +21,7 @@ const RootNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName="Login"
+        initialRouteName="ParticiparEvento"
       >
         <Stack.Screen name="Login" component={Login}></Stack.Screen>
         <Stack.Screen name="Cadastro" component={Cadastro}></Stack.Screen>
@@ -33,6 +35,7 @@ const RootNavigator = () => {
         <Stack.Screen name="EventosAbertos" component={EventosAbertos}></Stack.Screen>
         <Stack.Screen name="MeusEventos" component={MeusEventos}></Stack.Screen>
         <Stack.Screen name="Pesquisa" component={Pesquisa}></Stack.Screen>
+                <Stack.Screen name="Chat" component={Chat}></Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
+// import { useNavigation } from '@react-navigation/native'; // Descomente quando usar navegação
 
 export default function ParticiparEvento() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [statusEvento, setStatusEvento] = useState('Não Participa'); 
   const scrollRef = useRef(null);
   const { width: screenWidth } = Dimensions.get('window');
+  // const navigation = useNavigation(); // Descomente quando usar navegação
 
   const carouselItems = [
     { id: '1', image: require('../assets/show.jpg') },
@@ -37,23 +39,80 @@ export default function ParticiparEvento() {
     });
   };
 
+  // 🔹 Função para lidar com ação do botão (incluindo navegação)
+  const handleBotaoAcao = () => {
+    if (statusEvento === 'Não Participa') {
+      // Lógica para participar do evento
+      console.log('Participando do evento...');
+      // navigation.navigate('ConfirmacaoParticipacao', { 
+      //   eventoId: 'id_do_evento',
+      //   nomeEvento: 'Nome Do Evento'
+      // });
+      setStatusEvento('Pendente'); // Simula mudança de status
+    } 
+    else if (statusEvento === 'Participa') {
+      // Lógica para cancelar inscrição
+      console.log('Cancelando inscrição...');
+      // navigation.navigate('CancelamentoInscricao', {
+      //   eventoId: 'id_do_evento',
+      //   nomeEvento: 'Nome Do Evento'
+      // });
+      setStatusEvento('Não Participa'); // Volta ao estado inicial
+    } 
+    else if (statusEvento === 'Pendente') {
+      // Lógica para ir para pagamento
+      console.log('Redirecionando para pagamento...');
+      // navigation.navigate('Pagamento', {
+      //   eventoId: 'id_do_evento',
+      //   valor: '50.00',
+      //   nomeEvento: 'Nome Do Evento'
+      // });
+      // Após pagamento bem-sucedido, você mudaria para 'Participa'
+    }
+  };
+
   // 🔹 Função para renderizar botão conforme status
   const renderBotaoAcao = () => {
     let texto = '';
-    if (statusEvento === 'Não Participa') texto = 'Participar';
-    if (statusEvento === 'Participa') texto = 'Cancelar Inscrição';
-    if (statusEvento === 'Pendente') texto = 'Pagamento';
+    let icone = '';
+    let coresGradiente = ['#4f46e5', '#3b82f6']; // Cores padrão
+    
+    if (statusEvento === 'Não Participa') {
+      texto = 'Participar';
+      icone = 'add-circle-outline';
+      coresGradiente = ['#10b981', '#059669']; // Verde para participar
+    }
+    if (statusEvento === 'Participa') {
+      texto = 'Cancelar Inscrição';
+      icone = 'close-circle-outline';
+      coresGradiente = ['#ef4444', '#dc2626']; // Vermelho para cancelar
+    }
+    if (statusEvento === 'Pendente') {
+      texto = 'Pagamento';
+      icone = 'card-outline';
+      coresGradiente = ['#f59e0b', '#d97706']; // Laranja para pagamento
+    }
 
     return (
-      <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.gradientButton}>
+      <LinearGradient colors={coresGradiente} style={styles.gradientButton}>
         <TouchableOpacity 
           style={styles.participarButton} 
-          onPress={() => console.log(`${texto} clicado`)}
+          onPress={handleBotaoAcao}
         >
-          <Text style={styles.buttonText}>{texto}</Text>
+          <Icon name={icone} size={20} color="#fff" />
+          <Text style={[styles.buttonText, { marginLeft: 6 }]}>{texto}</Text>
         </TouchableOpacity>
       </LinearGradient>
     );
+  };
+
+  // 🔹 Função para abrir chat
+  const handleAbrirChat = () => {
+    console.log("Chat aberto");
+    // navigation.navigate('ChatEvento', {
+    //   eventoId: 'id_do_evento',
+    //   nomeEvento: 'Nome Do Evento'
+    // });
   };
 
   return (
@@ -117,8 +176,9 @@ export default function ParticiparEvento() {
         <Text style={styles.info}>Status do Evento: {statusEvento}</Text>
         <Text style={styles.info}>Restrições</Text>
         <Text style={styles.info}>Horários: Começa - Acaba</Text>
+        
+      
       </LinearGradient>
-
 
       <View style={styles.footer}>
         {/* Botão principal de ação (condicional) */}
@@ -126,7 +186,7 @@ export default function ParticiparEvento() {
 
         {/* Botão de chat */}
         <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.gradientButton}>
-          <TouchableOpacity style={styles.participarButton} onPress={() => console.log("Chat aberto")}>
+          <TouchableOpacity style={styles.participarButton} onPress={handleAbrirChat}>
             <Icon name="chatbubbles-outline" size={22} color="#fff" />
             <Text style={[styles.buttonText, { marginLeft: 6 }]}>Chat</Text>
           </TouchableOpacity>
@@ -135,7 +195,6 @@ export default function ParticiparEvento() {
     </ScrollView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -248,6 +307,24 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  // Estilos para botões de teste (remover em produção)
+  testButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 15,
+    gap: 5,
+  },
+  testButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 8,
+    borderRadius: 8,
+    flex: 1,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 12,
     textAlign: 'center',
   },
 });
