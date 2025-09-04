@@ -1,224 +1,569 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Image,
   TouchableOpacity,
-  Switch,
   TextInput,
+  Modal,
+  FlatList,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+ import { useNavigation } from '@react-navigation/native'; // Descomente quando usar navegação
 
 export default function FiltragemAvancada() {
-  const [usarLocalizacao, setUsarLocalizacao] = useState(false);
-  const [distancia, setDistancia] = useState(5);
-  const [vip, setVip] = useState(false);
-  const [combo, setCombo] = useState(false);
-  const [comida, setComida] = useState(false);
+  const navigation = useNavigation(); // Descomente quando usar navegação
+
+  // 🔹 Estados dos filtros
+  const [filtros, setFiltros] = useState({
+    usarLocalizacao: false,
+    distancia: 5,
+    tipoEvento: '',
+    restricaoIdade: '',
+    ingressoPago: '',
+    opcaoVip: false,
+    combosDisponiveis: false,
+    comidaBebida: false,
+    horario: '10:00',
+    duracao: '1h30'
+  });
+
+  // 🔹 Estados para as opções dos dropdowns
+  const [opcoesTipoEvento, setOpcoesTipoEvento] = useState([]);
+  const [opcoesRestricaoIdade, setOpcoesRestricaoIdade] = useState([]);
+  const [opcoesIngressoPago, setOpcoesIngressoPago] = useState([]);
+
+  // 🔹 Estado para controlar modais
+  const [modalAberto, setModalAberto] = useState(null);
+
+  // 🔹 Carregamento dos dados
+  const [carregando, setCarregando] = useState(true);
+
+  // 🔹 Buscar dados do banco
+  useEffect(() => {
+    buscarDadosFiltragem();
+  }, []);
+
+  const buscarDadosFiltragem = async () => {
+    try {
+      setCarregando(true);
+      
+      // 🔹 SIMULAÇÃO - substitua pela sua chamada real de API/banco
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Dados simulados do banco de dados
+      const dadosSimulados = {
+        tipoEvento: ['Shows', 'Festa', 'Teatro', 'Esporte', 'Conferência'],
+        restricaoIdade: ['Livre', '16', '18', '21+'],
+        ingressoPago: ['R$0,01', 'R$10,00', 'R$25,00', 'R$50,00', 'R$100,00+'],
+        filtrosIniciais: {
+          usarLocalizacao: false,
+          distancia: 5,
+          tipoEvento: 'Shows',
+          restricaoIdade: '18',
+          ingressoPago: 'R$0,01',
+          opcaoVip: false,
+          combosDisponiveis: false,
+          comidaBebida: false,
+          horario: '10:00',
+          duracao: '1h30'
+        }
+      };
+      
+      setOpcoesTipoEvento(dadosSimulados.tipoEvento);
+      setOpcoesRestricaoIdade(dadosSimulados.restricaoIdade);
+      setOpcoesIngressoPago(dadosSimulados.ingressoPago);
+      setFiltros(dadosSimulados.filtrosIniciais);
+      
+    } catch (error) {
+      console.error('Erro ao buscar dados de filtragem:', error);
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  // 🔹 Atualizar filtro
+  const atualizarFiltro = (campo, valor) => {
+    setFiltros(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  // 🔹 Aplicar filtros
+  const aplicarFiltros = () => {
+    console.log('Filtros aplicados:', filtros);
+    navigation.navigate('PagInicial', { filtros });
+  };
+
+  // 🔹 Voltar
+  const voltarTela = () => {
+    console.log('Voltando...');
+     navigation.goBack();
+  };
+
+  // 🔹 Abrir modal de seleção
+  const abrirModal = (tipo) => {
+    setModalAberto(tipo);
+  };
+
+  // 🔹 Selecionar opção do modal
+  const selecionarOpcao = (tipo, opcao) => {
+    atualizarFiltro(tipo, opcao);
+    setModalAberto(null);
+  };
+
+  if (carregando) {
+    return (
+      <SafeAreaView style={[styles.container, styles.loadingContainer]}>
+        <Text style={styles.loadingText}>Carregando filtros...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      {/* Header */}
       <View style={styles.header}>
-      <Image source={require('../assets/Logo oficial.png')} style={styles.logo} resizeMode="contain"/>
-        <Icon name="account-circle-outline" size={32} color="#4B4BE0" />
+        <Image source={require('../assets/Logo oficial.png')} style={styles.logo} />
+        <TouchableOpacity>
+          <Icon name="account-circle-outline" size={32} color="#4B5EFC" />
+        </TouchableOpacity>
       </View>
 
+      <View style={styles.content}>
+        {/* Seção de Distância */}
+        <Text style={styles.sectionTitle}>Distância de você</Text>
+        
+        <CheckboxItem 
+          label="Utilizar localização" 
+          value={filtros.usarLocalizacao} 
+          onChange={(value) => atualizarFiltro('usarLocalizacao', value)} 
+        />
 
-      <Text style={styles.sectionTitle}>Distância de você</Text>
-      <View style={styles.row}>
-      <CheckBoxItem label="Utilizar localização" value={usarLocalizacao} onChange={setUsarLocalizacao} />
+        <Text style={styles.distanceLabel}>Até {filtros.distancia}Km</Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={1}
+          maximumValue={20}
+          step={1}
+          minimumTrackTintColor="#4B5EFC"
+          maximumTrackTintColor="#E5E5E5"
+          thumbTintColor="#4B5EFC"
+          value={filtros.distancia}
+          onValueChange={(value) => atualizarFiltro('distancia', value)}
+        />
+
+        {/* Dropdowns */}
+        <DropdownItem 
+          label="Tipo de evento" 
+          value={filtros.tipoEvento}
+          onPress={() => abrirModal('tipoEvento')}
+        />
+        
+        <CheckboxItem 
+          label="Restrição de idade" 
+          value={false}
+          rightContent={
+            <TouchableOpacity 
+              style={styles.ageButton}
+              onPress={() => abrirModal('restricaoIdade')}
+            >
+              <Text style={styles.ageText}>{filtros.restricaoIdade}</Text>
+              <Icon name="chevron-down" size={16} color="#4B5EFC" />
+            </TouchableOpacity>
+          }
+        />
+
+        <CheckboxItem 
+          label="Ingresso pago" 
+          value={false}
+          rightContent={
+            <TouchableOpacity 
+              style={styles.priceButton}
+              onPress={() => abrirModal('ingressoPago')}
+            >
+              <Text style={styles.priceText}>{filtros.ingressoPago}</Text>
+              <Icon name="chevron-down" size={16} color="#4B5EFC" />
+            </TouchableOpacity>
+          }
+        />
+
+        {/* Checkboxes */}
+        <CheckboxItem 
+          label="Opção VIP disponível" 
+          value={filtros.opcaoVip} 
+          onChange={(value) => atualizarFiltro('opcaoVip', value)} 
+        />
+        
+        <CheckboxItem 
+          label="Combos disponíveis" 
+          value={filtros.combosDisponiveis} 
+          onChange={(value) => atualizarFiltro('combosDisponiveis', value)} 
+        />
+        
+        <CheckboxItem 
+          label="Comida/Bebida à venda" 
+          value={filtros.comidaBebida} 
+          onChange={(value) => atualizarFiltro('comidaBebida', value)} 
+        />
+
+        {/* Horário e Duração */}
+        <View style={styles.timeRow}>
+          <View style={styles.timeItem}>
+            <Text style={styles.timeLabel}>Horário</Text>
+            <TextInput 
+              style={styles.timeInput}
+              value={filtros.horario}
+              onChangeText={(value) => atualizarFiltro('horario', value)}
+            />
+          </View>
+          
+          <View style={styles.timeItem}>
+            <Text style={styles.timeLabel}>Duração</Text>
+            <TextInput 
+              style={styles.timeInput}
+              value={filtros.duracao}
+              onChangeText={(value) => atualizarFiltro('duracao', value)}
+            />
+          </View>
+        </View>
       </View>
 
-      <Text style={styles.kmLabel}>Até {distancia}Km</Text>
-      <Slider
-        style={{ width: '100%' }}
-        minimumValue={1}
-        maximumValue={20}
-        step={1}
-        minimumTrackTintColor="#4B4BE0"
-        maximumTrackTintColor="#DDD"
-        thumbTintColor="#4B4BE0"
-        value={distancia}
-        onValueChange={(value) => setDistancia(value)}
-      />
-
-      {/* Filtros adicionais */}
-      <DropDown label="Tipo de evento" value="Shows" />
-      <DropDown label="Restrição de idade" value="18" />
-      <DropDown label="Ingresso pago" value="R$0,01" />
-
-      <CheckBoxItem label="Opção VIP disponível" value={vip} onChange={setVip} />
-      <CheckBoxItem label="Combos disponíveis" value={combo} onChange={setCombo} />
-      <CheckBoxItem label="Comida/Bebida à venda" value={comida} onChange={setComida} />
-
-
-      <View style={styles.row}>
-        <Text style={styles.inputLabel}>Horário</Text>
-        <TextInput style={styles.timeInput} defaultValue="10:00" />
-        <Text style={styles.inputLabel}>Duração</Text>
-        <TextInput style={styles.timeInput} defaultValue="1h30" />
+      {/* Botões fixos no rodapé */}
+      <View style={styles.footer}>
+        <LinearGradient 
+          colors={['#4525a4', '#1868fd']} 
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 0 }}
+          style={styles.button}
+        >
+          <TouchableOpacity 
+            style={styles.buttonTouchable}
+            onPress={aplicarFiltros}
+          >
+            <Text style={styles.buttonText}>Aplicar filtros</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+        
+        <LinearGradient 
+          colors={['#4525a4', '#1868fd']} 
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 0 }}
+          style={styles.button}
+        >
+          <TouchableOpacity 
+            style={styles.buttonTouchable}
+            onPress={voltarTela}
+          >
+            <Text style={styles.buttonText}>Voltar</Text>
+          </TouchableOpacity>
+        </LinearGradient>
       </View>
 
-
-      <View style={styles.buttonContainer}>
-        <GradientButton label="Aplicar filtros" />
-        <GradientButton label="Voltar" />
-      </View>
-    </View>
+      {/* Modal de seleção */}
+      <Modal
+        visible={modalAberto !== null}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setModalAberto(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Selecionar {
+                  modalAberto === 'tipoEvento' ? 'Tipo de Evento' :
+                  modalAberto === 'restricaoIdade' ? 'Restrição de Idade' :
+                  'Ingresso Pago'
+                }
+              </Text>
+              <TouchableOpacity onPress={() => setModalAberto(null)}>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={
+                modalAberto === 'tipoEvento' ? opcoesTipoEvento :
+                modalAberto === 'restricaoIdade' ? opcoesRestricaoIdade :
+                opcoesIngressoPago
+              }
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => selecionarOpcao(modalAberto, item)}
+                >
+                  <Text style={styles.modalOptionText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 // Componentes auxiliares
-
-function DropDown({ label, value }) {
+function DropdownItem({ label, value, onPress }) {
   return (
-    <View style={styles.dropDownRow}>
-      <Text style={styles.dropDownLabel}>{label}</Text>
-      <View style={styles.dropDownBox}>
-        <Text style={styles.dropDownText}>{value}</Text>
-        <Icon name="chevron-down" size={20} color="#4B4BE0" />
+    <TouchableOpacity style={styles.dropdownContainer} onPress={onPress}>
+      <Text style={styles.dropdownLabel}>{label}</Text>
+      <View style={styles.dropdownButton}>
+        <Text style={styles.dropdownValue}>{value}</Text>
+        <Icon name="chevron-down" size={16} color="#4B5EFC" />
       </View>
-    </View>
-  );
-}
-
-function CheckBoxItem({ label, value, onChange }) {
-  return (
-    <TouchableOpacity onPress={() => onChange(!value)} style={styles.checkboxRow}>
-      <View style={[styles.checkbox, value && styles.checkboxChecked]}>
-        {value && <Icon name="check" size={16} color="#fff" />}
-      </View>
-      <Text style={styles.checkboxLabel}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-function GradientButton({ label, onPress }) {
+function CheckboxItem({ label, value, onChange, rightContent }) {
   return (
-<TouchableOpacity style={{ backgroundColor: '#4B4BE0', padding: 12, borderRadius: 10 }}>
-  <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Aplicar filtros</Text>
-</TouchableOpacity>
+    <View style={styles.checkboxRow}>
+      <TouchableOpacity 
+        style={styles.checkboxContainer}
+        onPress={() => onChange && onChange(!value)}
+      >
+        <View style={[styles.checkbox, value && styles.checkboxChecked]}>
+          {value && <View style={styles.checkboxDot} />}
+        </View>
+        <Text style={styles.checkboxLabel}>{label}</Text>
+      </TouchableOpacity>
+      {rightContent && rightContent}
+    </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F6FB',
-    padding: 20,
-    paddingTop: 50,
+    backgroundColor: '#FFFFFF',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#4B5EFC',
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
   logo: {
-    width: 80,
-    height: 40,
+    width: 50,
+    height: 30,
+    resizeMode: 'contain',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    marginTop: 30,
-    marginBottom: 10,
-    color: '#4B4BE0',
+    fontWeight: '500',
+    color: '#4B5EFC',
+    marginBottom: 15,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  switchLabel: {
-    marginLeft: 8,
+  distanceLabel: {
     fontSize: 14,
     color: '#333',
-  },
-  kmLabel: {
-    alignSelf: 'flex-start',
-    fontSize: 14,
     marginBottom: 10,
-    color: '#4B4BE0',
+    marginTop: 15,
   },
-  dropDownRow: {
-    marginVertical: 8,
+  slider: {
+    width: '100%',
+    height: 40,
+    marginBottom: 20,
   },
-  dropDownLabel: {
+  dropdownContainer: {
+    marginBottom: 15,
+  },
+  dropdownLabel: {
     fontSize: 14,
-    color: '#4B4BE0',
-    marginBottom: 4,
+    color: '#4B5EFC',
+    marginBottom: 8,
   },
-  dropDownBox: {
+  dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: '#BBB',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
     justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F8F9FA',
   },
-  dropDownText: {
+  dropdownValue: {
     fontSize: 14,
     color: '#333',
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 6,
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#4B4BE0',
-    marginRight: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
+    marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#4B4BE0',
+    borderColor: '#4B5EFC',
+    backgroundColor: '#4B5EFC',
+  },
+  checkboxDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
   checkboxLabel: {
     fontSize: 14,
     color: '#333',
   },
-  inputLabel: {
-    fontSize: 14,
-    color: '#4B4BE0',
-    marginRight: 8,
-  },
-  timeInput: {
-    borderWidth: 1,
-    borderColor: '#BBB',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginRight: 16,
-    width: 80,
-    fontSize: 14,
-    backgroundColor: '#FFF',
-  },
-  buttonContainer: {
+  ageButton: {
     flexDirection: 'row',
-    marginTop: 30,
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0F4FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  buttonWrapper: {
+  ageText: {
+    fontSize: 12,
+    color: '#4B5EFC',
+    marginRight: 4,
+  },
+  priceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F4FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  priceText: {
+    fontSize: 12,
+    color: '#4B5EFC',
+    marginRight: 4,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  timeItem: {
     flex: 1,
     marginHorizontal: 5,
   },
-  gradientButton: {
-    padding: 12,
-    borderRadius: 10,
+  timeLabel: {
+    fontSize: 14,
+    color: '#4B5EFC',
+    marginBottom: 8,
+  },
+  timeInput: {
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: '#F8F9FA',
+    textAlign: 'center',
+  },
+  footer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  button: {
+    flex: 1,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  buttonTouchable: {
+    paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    width: '80%',
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalOption: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  modalOptionText: {
+    fontSize: 14,
+    color: '#333',
   },
 });

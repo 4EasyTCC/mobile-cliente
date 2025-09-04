@@ -27,7 +27,8 @@
     "react-native-reanimated": "^4.0.2",
     "react-native-reanimated-carousel": "^4.0.3",
     "react-native-snap-carousel": "^3.9.1",
-    "react-native-view-shot": "^4.0.3"
+    "react-native-view-shot": "^4.0.3",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

@@ -21,7 +21,7 @@ const RootNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName="ParticiparEvento"
+        initialRouteName="Perfil"
       >
         <Stack.Screen name="Login" component={Login}></Stack.Screen>
         <Stack.Screen name="Cadastro" component={Cadastro}></Stack.Screen>

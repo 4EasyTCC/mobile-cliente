@@ -11,15 +11,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-// import { useNavigation } from '@react-navigation/native'; // Descomente quando usar navegação
+import { useNavigation } from '@react-navigation/native'; 
 
 export default function ParticiparEvento() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [statusEvento, setStatusEvento] = useState('Não Participa'); 
   const scrollRef = useRef(null);
   const { width: screenWidth } = Dimensions.get('window');
-  // const navigation = useNavigation(); // Descomente quando usar navegação
-
+  const navigation = useNavigation(); 
   const carouselItems = [
     { id: '1', image: require('../assets/show.jpg') },
     { id: '2', image: require('../assets/show.jpg') },
@@ -53,20 +52,16 @@ export default function ParticiparEvento() {
     else if (statusEvento === 'Participa') {
       // Lógica para cancelar inscrição
       console.log('Cancelando inscrição...');
-      // navigation.navigate('CancelamentoInscricao', {
-      //   eventoId: 'id_do_evento',
-      //   nomeEvento: 'Nome Do Evento'
-      // });
       setStatusEvento('Não Participa'); // Volta ao estado inicial
     } 
     else if (statusEvento === 'Pendente') {
       // Lógica para ir para pagamento
       console.log('Redirecionando para pagamento...');
-      // navigation.navigate('Pagamento', {
+      navigation.navigate('PaginaPagamentos', {
       //   eventoId: 'id_do_evento',
       //   valor: '50.00',
       //   nomeEvento: 'Nome Do Evento'
-      // });
+      });
       // Após pagamento bem-sucedido, você mudaria para 'Participa'
     }
   };
@@ -109,10 +104,8 @@ export default function ParticiparEvento() {
   // 🔹 Função para abrir chat
   const handleAbrirChat = () => {
     console.log("Chat aberto");
-    // navigation.navigate('ChatEvento', {
-    //   eventoId: 'id_do_evento',
-    //   nomeEvento: 'Nome Do Evento'
-    // });
+    navigation.navigate('Chat', {
+    });
   };
 
   return (
@@ -177,7 +170,6 @@ export default function ParticiparEvento() {
         <Text style={styles.info}>Restrições</Text>
         <Text style={styles.info}>Horários: Começa - Acaba</Text>
         
-      
       </LinearGradient>
 
       <View style={styles.footer}>
@@ -292,9 +284,16 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 20,
+    flexDirection: 'column',
+    gap: 15,
+  },
+  mainButtonContainer: {
+    width: '100%',
+  },
+  secondaryButtonsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: 10,
   },
   participarButton: {
@@ -303,6 +302,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 10,
+  },
+  iconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    minWidth: 90,
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#fff',
