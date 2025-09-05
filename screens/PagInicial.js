@@ -140,7 +140,18 @@ function Carousel({ title, navigation, loadMoreRoute }) {
           scrollEventThrottle={16}
         >
           {mockCards.map((_, i) => (
-            <View key={i} style={styles.card} />
+            <TouchableOpacity
+              key={i}
+              style={styles.card}
+              onPress={() => navigation.navigate('ParticiparEvento')} // Navegar para a tela ParticiparEvento
+            >
+              {/* Card com imagem */}
+              <Image
+                source={require('../assets/show.jpg')} // Imagem default
+                style={styles.cardImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -223,6 +234,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFF',
     marginRight: CARD_SPACING,
+    overflow: 'hidden', // Garante que a imagem não ultrapasse os limites do card
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
   },
 
   /* Carregar todos */

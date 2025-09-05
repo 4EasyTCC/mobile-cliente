@@ -38,40 +38,40 @@ export default function MeusEventos({ navigation }) {
 
       {/* Barra de pesquisa */}
       <View style={styles.searchContainer}>
-              <TextInput
-                placeholder="Buscar eventos..."
-                placeholderTextColor="#666"
-                style={styles.searchInput}
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-                onSubmitEditing={() => {
-                  if (searchTerm.trim()) {
-                    navigation.navigate('Pesquisa', { termo: searchTerm.trim() });
-                    setSearchTerm('');
-                  }
-                }}
-              />
-              <Icon name="magnify" size={24} color="#4525a4" style={styles.searchIcon} />
-            </View>
+        <TextInput
+          placeholder="Buscar eventos..."
+          placeholderTextColor="#666"
+          style={styles.searchInput}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          onSubmitEditing={() => {
+            if (searchTerm.trim()) {
+              navigation.navigate('Pesquisa', { termo: searchTerm.trim() });
+              setSearchTerm('');
+            }
+          }}
+        />
+        <Icon name="magnify" size={24} color="#4525a4" style={styles.searchIcon} />
+      </View>
 
       {/* Conteúdo principal com gradiente */}
       <LinearGradient
-        colors={['#4525a4', '#1868fd' ]}
+        colors={['#4525a4', '#1868fd']}
         start={{ x: 0, y: 1 }}
         end={{ x: 0, y: 0 }}
         style={styles.gradientBox}
       >
         <Text style={styles.sectionTitle}>Meus eventos</Text>
-        <Carousel title="Shows" />
-        <Carousel title="Festas" />
-        <Carousel title="Jogos" />
-        <Carousel title="Shows" />
+        <Carousel title="Shows" navigation={navigation} />
+        <Carousel title="Festas" navigation={navigation} />
+        <Carousel title="Jogos" navigation={navigation} />
+        <Carousel title="Shows" navigation={navigation} />
       </LinearGradient>
     </ScrollView>
   );
 }
 
-function Carousel({ title }) {
+function Carousel({ title, navigation }) {
   const scrollRef = useRef(null);
   const scrollPosition = useRef(0); // Guarda a posição atual
 
@@ -103,7 +103,17 @@ function Carousel({ title }) {
           scrollEventThrottle={16}
         >
           {mockCards.map((_, i) => (
-            <View key={i} style={styles.card} />
+            <TouchableOpacity
+              key={i}
+              style={styles.card}
+              onPress={() => navigation.navigate('ParticiparEvento')} // Navegar para a tela ParticiparEvento
+            >
+              <Image
+                source={require('../assets/show.jpg')} // Imagem default
+                style={styles.cardImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -175,5 +185,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#FFF',
     marginRight: CARD_SPACING,
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
   },
 });

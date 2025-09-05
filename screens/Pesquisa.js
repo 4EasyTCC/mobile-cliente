@@ -55,15 +55,15 @@ export default function Pesquisa({ navigation }) {
 
             {/* Conteúdo principal com gradiente */}
             <Text style={styles.sectionTitle}>Pesquisa</Text>
-            <Carousel title="Shows" />
-            <Carousel title="Festas" />
-            <Carousel title="Jogos" />
-            <Carousel title="Shows" />
+            <Carousel title="Shows" navigation={navigation} />
+            <Carousel title="Festas" navigation={navigation} />
+            <Carousel title="Jogos" navigation={navigation} />
+            <Carousel title="Shows" navigation={navigation} />
         </ScrollView>
     );
 }
 
-function Carousel({ title }) {
+function Carousel({ title, navigation }) {
     const scrollRef = useRef(null);
     const scrollPosition = useRef(0); // Guarda a posição atual
 
@@ -95,7 +95,17 @@ function Carousel({ title }) {
                     scrollEventThrottle={16}
                 >
                     {mockCards.map((_, i) => (
-                        <View key={i} style={styles.card} />
+                        <TouchableOpacity
+                            key={i}
+                            style={styles.card}
+                            onPress={() => navigation.navigate('ParticiparEvento')} // Navegar para a tela ParticiparEvento
+                        >
+                            <Image
+                                source={require('../assets/show.jpg')} // Imagem de exemplo para o card
+                                style={styles.cardImage}
+                                resizeMode="cover"
+                            />
+                        </TouchableOpacity>
                     ))}
                 </ScrollView>
 
@@ -171,5 +181,10 @@ const styles = StyleSheet.create({
         marginRight: CARD_SPACING,
         borderWidth: 2,
         borderColor: '#4B4BE0', // Margem azul
+        overflow: 'hidden',
+    },
+    cardImage: {
+        width: '100%',
+        height: '100%',
     },
 });
