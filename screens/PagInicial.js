@@ -15,19 +15,54 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 /* ---------------------- CONSTANTES ---------------------- */
-const CARD_WIDTH = 140;
-const CARD_HEIGHT = 100;
+const CARD_WIDTH = 180;
+const CARD_HEIGHT = 150;
 const CARD_SPACING = 16;
 const { width: screenWidth } = Dimensions.get('window');
 const mockCards = Array.from({ length: 10 });
 
-// Dados mockados para eventos com mais variedade
+// Dados mockados - em produção virão do backend
 const eventData = [
-  { id: 1, title: 'Rock Festival', image: require('../assets/show.jpg'), category: 'Shows' },
-  { id: 2, title: 'Tech Conference', image: require('../assets/show.jpg'), category: 'Cultural' },
-  { id: 3, title: 'Football Match', image: require('../assets/show.jpg'), category: 'Esportivo' },
-  { id: 4, title: 'Art Exhibition', image: require('../assets/show.jpg'), category: 'Cultural' },
-  { id: 5, title: 'DJ Night', image: require('../assets/show.jpg'), category: 'Festas' },
+  { 
+    id: 1, 
+    title: 'Rock Festival', 
+    image: 'https://example.com/images/rock-festival.jpg', 
+    category: 'Shows', 
+    date: '25 Set',
+    fallbackImage: require('../assets/show.jpg') 
+  },
+  { 
+    id: 2, 
+    title: 'Tech Conference', 
+    image: 'https://example.com/images/tech-conference.jpg', 
+    category: 'Cultural', 
+    date: '28 Set',
+    fallbackImage: require('../assets/show.jpg')
+  },
+  { 
+    id: 3, 
+    title: 'Football Match', 
+    image: 'https://example.com/images/football.jpg', 
+    category: 'Esportivo', 
+    date: '30 Set',
+    fallbackImage: require('../assets/show.jpg')
+  },
+  { 
+    id: 4, 
+    title: 'Art Exhibition', 
+    image: 'https://example.com/images/art-exhibition.jpg', 
+    category: 'Cultural', 
+    date: '02 Out',
+    fallbackImage: require('../assets/show.jpg')
+  },
+  { 
+    id: 5, 
+    title: 'DJ Night', 
+    image: 'https://example.com/images/dj-night.jpg', 
+    category: 'Festas', 
+    date: '05 Out',
+    fallbackImage: require('../assets/show.jpg')
+  },
 ];
 
 /* ---------------------- TELA INICIAL -------------------- */
@@ -38,6 +73,12 @@ export default function PaginaInicial({ navigation }) {
     participando: 0,
     favoritos: 0
   });
+  const [eventsData, setEventsData] = useState({
+    featured: [],
+    myEvents: [],
+    nearby: []
+  });
+  const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -65,6 +106,43 @@ export default function PaginaInicial({ navigation }) {
     }
   };
 
+  // Função para buscar eventos do backend
+  const fetchEventsData = async () => {
+    try {
+      setLoading(true);
+      
+      // Substitua pelas suas URLs da API
+      // const [featuredRes, myEventsRes, nearbyRes] = await Promise.all([
+      //   fetch('https://sua-api.com/events/featured'),
+      //   fetch('https://sua-api.com/events/my-events'),
+      //   fetch('https://sua-api.com/events/nearby')
+      // ]);
+      
+      // const featured = await featuredRes.json();
+      // const myEvents = await myEventsRes.json();
+      // const nearby = await nearbyRes.json();
+      
+      // Simulação de dados vindos do backend
+      const mockEventsData = {
+        featured: eventData,
+        myEvents: eventData.slice(0, 3),
+        nearby: eventData.slice(2, 6)
+      };
+      
+      setEventsData(mockEventsData);
+    } catch (error) {
+      console.error('Erro ao buscar eventos:', error);
+      // Usar dados mockados em caso de erro
+      setEventsData({
+        featured: eventData,
+        myEvents: eventData.slice(0, 3),
+        nearby: eventData.slice(2, 6)
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Animação de entrada
     Animated.parallel([
@@ -80,8 +158,9 @@ export default function PaginaInicial({ navigation }) {
       }),
     ]).start();
 
-    // Buscar dados do usuário
+    // Buscar dados do usuário e eventos
     fetchUserStats();
+    fetchEventsData();
   }, []);
 
   return (
@@ -216,7 +295,8 @@ export default function PaginaInicial({ navigation }) {
                 title="⭐ Eventos em Destaque"
                 navigation={navigation}
                 loadMoreRoute="EventosAbertos"
-                data={eventData}
+                data={eventsData.featured}
+                loading={loading}
               />
 
               {/* Meus eventos */}
@@ -224,7 +304,8 @@ export default function PaginaInicial({ navigation }) {
                 title="📅 Meus Eventos"
                 navigation={navigation}
                 loadMoreRoute="MeusEventos"
-                data={eventData.slice(0, 3)}
+                data={eventsData.myEvents}
+                loading={loading}
               />
 
               {/* Eventos próximos */}
@@ -232,7 +313,8 @@ export default function PaginaInicial({ navigation }) {
                 title="📍 Perto de Você"
                 navigation={navigation}
                 loadMoreRoute="EventosProximos"
-                data={eventData.slice(2, 6)}
+                data={eventsData.nearby}
+                loading={loading}
               />
             </View>
           </LinearGradient>
@@ -300,8 +382,6 @@ export default function PaginaInicial({ navigation }) {
           </View>
         </Animated.View>
 
-        {/* Seção de chamada para ação - REMOVIDA */}
-
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </>
@@ -309,15 +389,55 @@ export default function PaginaInicial({ navigation }) {
 }
 
 /* ---------------------- COMPONENTE CARROSSEL MELHORADO ------------- */
-function Carousel({ title, navigation, loadMoreRoute, data }) {
+function Carousel({ title, navigation, loadMoreRoute, data, loading }) {
   const scrollRef = useRef(null);
-  const scrollPosition = useRef(0);
 
-  const scrollBy = (distance) => {
-    if (!scrollRef.current) return;
-    scrollPosition.current += distance;
-    if (scrollPosition.current < 0) scrollPosition.current = 0;
-    scrollRef.current.scrollTo({ x: scrollPosition.current, animated: true });
+  // Componente de loading para os cards
+  const LoadingCard = () => (
+    <View style={[styles.card, styles.loadingCard]}>
+      <View style={styles.loadingPlaceholder} />
+    </View>
+  );
+
+  // Componente de card de evento
+  const EventCard = ({ item, index }) => {
+    const [imageError, setImageError] = useState(false);
+    
+    const imageSource = imageError || !item?.image 
+      ? item?.fallbackImage || require('../assets/show.jpg')
+      : { uri: item.image };
+
+    return (
+      <View style={styles.eventCardWrapper}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('ParticiparEvento', { eventId: item?.id })}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={imageSource}
+            style={styles.cardImage}
+            resizeMode="cover"
+            onError={() => setImageError(true)}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.7)']}
+            style={styles.cardOverlay}
+          />
+        </TouchableOpacity>
+        <View style={styles.eventInfo}>
+          <Text style={styles.eventTitle} numberOfLines={2}>
+            {item?.title || `Evento ${index + 1}`}
+          </Text>
+          <View style={styles.eventDateContainer}>
+            <Icon name="calendar" size={14} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.eventDate}>
+              {item?.date || `${25 + index} Set`}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -326,69 +446,44 @@ function Carousel({ title, navigation, loadMoreRoute, data }) {
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
 
-      <View style={styles.carouselRow}>
-        <TouchableOpacity 
-          style={styles.arrowButton}
-          onPress={() => scrollBy(-CARD_WIDTH * 2)}
-        >
-          <Icon name="chevron-left" size={24} color="rgba(255,255,255,0.8)" />
-        </TouchableOpacity>
-
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardsContainer}
-          onScroll={(event) => {
-            scrollPosition.current = event.nativeEvent.contentOffset.x;
-          }}
-          scrollEventThrottle={16}
-          decelerationRate="fast"
-          snapToInterval={CARD_WIDTH + CARD_SPACING}
-          snapToAlignment="start"
-        >
-          {(data || mockCards).map((item, i) => (
-            <TouchableOpacity
-              key={i}
-              style={styles.card}
-              onPress={() => navigation.navigate('ParticiparEvento')}
-              activeOpacity={0.8}
-            >
-              <Image
-                source={require('../assets/show.jpg')}
-                style={styles.cardImage}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.7)']}
-                style={styles.cardOverlay}
-              >
-                <View style={styles.cardContent}>
-                  <View style={styles.cardInfo}>
-                    <Icon name="calendar" size={12} color="#FFF" />
-                    <Text style={styles.cardDate}>25 Set</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <TouchableOpacity 
-          style={styles.arrowButton}
-          onPress={() => scrollBy(CARD_WIDTH * 2)}
-        >
-          <Icon name="chevron-right" size={24} color="rgba(255,255,255,0.8)" />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={styles.loadMore}
-        onPress={() => navigation.navigate(loadMoreRoute)}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.cardsContainer}
+        decelerationRate="fast"
+        snapToInterval={CARD_WIDTH + CARD_SPACING}
+        snapToAlignment="start"
+        style={styles.carouselScroll}
       >
-        <Text style={styles.loadMoreText}>Ver todos</Text>
-        <Icon name="arrow-right" size={16} color="rgba(255,255,255,0.8)" />
-      </TouchableOpacity>
+        {loading ? (
+          // Mostra placeholders durante o loading
+          Array.from({ length: 5 }).map((_, index) => (
+            <View key={`loading-${index}`} style={styles.eventCardWrapper}>
+              <LoadingCard />
+              <View style={styles.eventInfo}>
+                <View style={[styles.loadingText, { width: '80%', height: 16 }]} />
+                <View style={[styles.loadingText, { width: '60%', height: 14, marginTop: 6 }]} />
+              </View>
+            </View>
+          ))
+        ) : (
+          // Mostra os dados reais
+          (data || []).map((item, index) => (
+            <EventCard key={item?.id || index} item={item} index={index} />
+          ))
+        )}
+      </ScrollView>
+
+      {!loading && (
+        <TouchableOpacity
+          style={styles.loadMoreButton}
+          onPress={() => navigation.navigate(loadMoreRoute)}
+        >
+          <Text style={styles.loadMoreButtonText}>Ver todos</Text>
+          <Icon name="arrow-right" size={18} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -411,8 +506,8 @@ const styles = StyleSheet.create({
   },
 
   logo: { 
-    width: 120, 
-    height: 80,
+    width: 160, 
+    height: 110,
   },
 
   headerRight: {
@@ -568,7 +663,7 @@ const styles = StyleSheet.create({
   carouselHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     marginBottom: 16,
     paddingHorizontal: 10,
   },
@@ -579,31 +674,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  carouselRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  arrowButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 8,
+  carouselScroll: {
+    paddingLeft: 10,
   },
 
   cardsContainer: { 
     flexDirection: 'row', 
-    paddingRight: 10,
+    paddingRight: 30,
+  },
+
+  eventCardWrapper: {
+    marginRight: CARD_SPACING,
   },
 
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: 15,
-    marginRight: CARD_SPACING,
     overflow: 'hidden',
     backgroundColor: '#FFF',
     shadowColor: '#000',
@@ -623,45 +710,71 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '60%',
-    justifyContent: 'flex-end',
-    padding: 12,
+    height: '40%',
   },
 
-  cardContent: {
-    gap: 4,
-    justifyContent: 'flex-end',
-    height: '100%',
+  eventInfo: {
+    paddingTop: 12,
+    paddingHorizontal: 4,
   },
 
-  cardInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  cardDate: {
+  eventTitle: {
     color: '#FFF',
-    fontSize: 12,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    lineHeight: 20,
   },
 
-  /* Carregar todos */
-  loadMore: {
+  eventDateContainer: {
     flexDirection: 'row',
-    alignSelf: 'center',
     alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
+    gap: 6,
   },
 
-  loadMoreText: { 
-    color: 'rgba(255,255,255,0.9)', 
-    fontSize: 14, 
+  eventDate: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  /* Carregar todos - Nova posição */
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignSelf: 'center',
+    minWidth: 120,
+  },
+
+  loadMoreButtonText: { 
+    color: '#FFF', 
+    fontSize: 15, 
     fontWeight: '600',
-    marginRight: 6,
+    marginRight: 8,
+  },
+
+  /* Estados de loading */
+  loadingCard: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+
+  loadingPlaceholder: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 15,
+  },
+
+  loadingText: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 4,
   },
 
   /* Filtros redesenhados */
@@ -737,58 +850,6 @@ const styles = StyleSheet.create({
 
   filterTextActive: {
     color: '#FFF',
-  },
-
-  /* CTA Section */
-  ctaSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-
-  ctaCard: {
-    borderRadius: 20,
-    padding: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-
-  ctaContent: {
-    flex: 1,
-  },
-
-  ctaTitle: {
-    color: '#FFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-
-  ctaSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    marginBottom: 16,
-  },
-
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignSelf: 'flex-start',
-    gap: 8,
-  },
-
-  ctaButtonText: {
-    color: '#ee5a24',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  ctaIcon: {
-    marginLeft: 20,
   },
 
   bottomSpacing: {
