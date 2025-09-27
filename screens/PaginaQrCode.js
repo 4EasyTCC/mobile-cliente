@@ -14,13 +14,14 @@ import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import * as Font from 'expo-font';
+import { useNavigation } from '@react-navigation/native'; 
+
 
 
 export default function PaginaQrCode() {
-  const [text] = useState('https://www.playstation.com/pt-br/games/sonic-x-shadow-generations/');
+  const [text] = useState('https://www.google.com/imgres?q=metal%20sonic%20farmando%20aura&imgurl=https%3A%2F%2Fi.redd.it%2Fso-does-metal-sonic-try-to-aura-farm-or-does-it-just-kinda-v0-6f9kulupq8ie1.jpg%3Fwidth%3D1170%26format%3Dpjpg%26auto%3Dwebp%26s%3D8b76d3c36aa62a27c4ede05f0d8e026593930305&imgrefurl=https%3A%2F%2Fwww.reddit.com%2Fr%2FMoonPissing%2Fcomments%2F1ily1y7%2Fso_does_metal_sonic_try_to_aura_farm_or_does_it%2F%3Ftl%3Dpt-br&docid=1YYFwL-DS60laM&tbnid=kKHeHUlDaYtvdM&vet=12ahUKEwjUnsr1zsmPAxX7PrkGHS3vAdYQM3oECCAQAA..i&w=1170&h=1277&hcb=2&ved=2ahUKEwjUnsr1zsmPAxX7PrkGHS3vAdYQM3oECCAQAA');
   const qrRef = useRef();
-
-  // Função para salvar QR Code
+  const navigation = useNavigation(); 
   const salvarQrCode = async () => {
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -40,6 +41,11 @@ export default function PaginaQrCode() {
       Alert.alert('Erro', 'Não foi possível salvar o QR Code.');
       console.error(error);
     }
+  };
+
+  const Voltar = () => {
+    navigation.navigate('ParticiparEvento', {
+    });
   };
 
   return (
@@ -66,6 +72,7 @@ export default function PaginaQrCode() {
       {/* Footer buttons */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.buttonOutline} onPress={() => navigation.navigate('ParticiparEvento')}>
+          
           <Text style={styles.buttonOutlineText}>Voltar</Text>
         </TouchableOpacity>
 
