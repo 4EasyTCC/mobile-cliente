@@ -11,10 +11,13 @@ import {
   Animated,
   StatusBar,
   Share,
+  Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+import { API_URL } from '@env';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -33,7 +36,8 @@ export default function ParticiparEvento({ route }) {
     restricoes: 'Carregando...',
     horarioInicio: '00:00',
     horarioFim: '00:00',
-    data: '00/00/0000'
+    data: '00/00/0000',
+    imagens: [],
   });
   
   const scrollRef = useRef(null);
@@ -41,40 +45,38 @@ export default function ParticiparEvento({ route }) {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const navigation = useNavigation();
 
-  const carouselItems = [
-    { id: '1', image: require('../assets/show.jpg') },
-    { id: '2', image: require('../assets/show.jpg') },
-    { id: '3', image: require('../assets/show.jpg') },
-  ];
+  // Obtenha o eventoId da rota
+  const { eventoId } = route.params;
 
-  // Simular busca de dados do backend
   const fetchEventoData = async () => {
     try {
-      // const response = await fetch(`https://sua-api.com/eventos/${route.params?.eventoId}`);
-      // const data = await response.json();
+      const response = await axios.get(`${API_URL}/api/eventos/${eventoId}`);
+      const data = response.data.evento;
       
-      // Dados mockados que viriam do backend
-      const mockData = {
-        nome: 'Rock Festival 2024',
-        descricao: 'O maior festival de rock da cidade! Venha curtir os melhores shows com bandas nacionais e internacionais.',
-        preco: 89.90,
-        nomeDono: 'João Silva Productions',
-        endereco: 'Av. Paulista, 1000 - São Paulo, SP',
-        tipo: 'Show Musical',
-        restricoes: 'Proibido entrada de bebidas e alimentos',
-        horarioInicio: '20:00',
-        horarioFim: '02:00',
-        data: '25/12/2024'
-      };
-      
-      setEventoData(mockData);
+      const ingressos = data.Ingressos || [];
+      const preco = ingressos.length > 0 ? parseFloat(ingressos[0].preco) : 0;
+      const imagens = data.Midia || [];
+
+      setEventoData({
+        nome: data.nomeEvento,
+        descricao: data.descEvento,
+        preco: preco,
+        nomeDono: data.organizador?.nome || 'Organizador desconhecido',
+        endereco: data.localizacao?.endereco || 'Localização não informada',
+        tipo: data.categoria || 'Categoria não informada',
+        restricoes: data.restricoes || 'Nenhuma restrição',
+        horarioInicio: data.horaInicio,
+        horarioFim: data.horaFim,
+        data: new Date(data.dataInicio).toLocaleDateString('pt-BR'),
+        imagens: imagens.map(media => `${API_URL}${media.url}`)
+      });
     } catch (error) {
       console.error('Erro ao buscar dados do evento:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os detalhes do evento. Verifique se o backend está ativo e o ID do evento é válido.');
     }
   };
 
   useEffect(() => {
-    // Animação de entrada
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -89,7 +91,7 @@ export default function ParticiparEvento({ route }) {
     ]).start();
 
     fetchEventoData();
-  }, []);
+  }, [eventoId]); // Recarregue se o ID do evento mudar
 
   const handleScroll = (event) => {
     const contentOffset = event.nativeEvent.contentOffset.x;
@@ -111,7 +113,7 @@ export default function ParticiparEvento({ route }) {
       setStatusEvento('Não Participa');
     } else if (statusEvento === 'Pendente') {
       navigation.navigate('PaginaPagamentos', {
-        eventoId: route.params?.eventoId,
+        eventoId: eventoId,
         valor: eventoData.preco,
         nomeEvento: eventoData.nome
       });
@@ -243,7 +245,7 @@ export default function ParticiparEvento({ route }) {
             <TouchableOpacity 
               style={styles.commentsButton}
               onPress={() => navigation.navigate('Comentario', {
-                eventoId: route.params?.eventoId,
+                eventoId: eventoId,
                 eventoData: eventoData
               })}
             >
@@ -303,7 +305,6 @@ export default function ParticiparEvento({ route }) {
     <>
       <StatusBar barStyle="light-content" backgroundColor="#4f46e5" />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header com gradiente */}
         <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.headerGradient}>
           <View style={styles.header}>
             <TouchableOpacity 
@@ -335,7 +336,6 @@ export default function ParticiparEvento({ route }) {
           </View>
         </LinearGradient>
 
-        {/* Carrossel de imagens */}
         <View style={styles.carouselContainer}>
           <ScrollView
             ref={scrollRef}
@@ -346,10 +346,10 @@ export default function ParticiparEvento({ route }) {
             scrollEventThrottle={16}
             style={styles.carouselScroll}
           >
-            {carouselItems.map((item, index) => (
-              <View key={item.id} style={styles.carouselItem}>
+            {eventoData.imagens.map((uri, index) => (
+              <View key={index} style={styles.carouselItem}>
                 <Image 
-                  source={item.image} 
+                  source={{ uri }} 
                   style={styles.eventImage} 
                   resizeMode="cover"
                 />
@@ -361,9 +361,8 @@ export default function ParticiparEvento({ route }) {
             ))}
           </ScrollView>
 
-          {/* Indicadores do carrossel */}
           <View style={styles.pagination}>
-            {carouselItems.map((_, index) => (
+            {eventoData.imagens.map((_, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
@@ -375,12 +374,11 @@ export default function ParticiparEvento({ route }) {
             ))}
           </View>
 
-          {/* Status badge */}
           <View style={styles.statusBadge}>
             <LinearGradient
               colors={statusEvento === 'Participa' ? ['#10b981', '#059669'] : 
-                     statusEvento === 'Pendente' ? ['#f59e0b', '#d97706'] : 
-                     ['#6b7280', '#4b5563']}
+                      statusEvento === 'Pendente' ? ['#f59e0b', '#d97706'] : 
+                      ['#6b7280', '#4b5563']}
               style={styles.statusGradient}
             >
               <Text style={styles.statusText}>{statusEvento}</Text>
@@ -388,7 +386,6 @@ export default function ParticiparEvento({ route }) {
           </View>
         </View>
 
-        {/* Informações do evento */}
         <Animated.View 
           style={[
             styles.eventInfo,
@@ -403,7 +400,6 @@ export default function ParticiparEvento({ route }) {
           <Text style={styles.eventDescription}>{eventoData.descricao}</Text>
         </Animated.View>
 
-        {/* Tabs de navegação */}
         <View style={styles.tabsContainer}>
           {[
             { key: 'detalhes', label: 'Detalhes', icon: 'information-outline' },
@@ -433,7 +429,6 @@ export default function ParticiparEvento({ route }) {
           ))}
         </View>
 
-        {/* Conteúdo das tabs */}
         <Animated.View 
           style={[
             {
@@ -445,7 +440,6 @@ export default function ParticiparEvento({ route }) {
           {renderTabContent()}
         </Animated.View>
 
-        {/* Botões de ação */}
         <View style={styles.actionsContainer}>
           {renderBotaoAcao()}
           
@@ -465,7 +459,7 @@ export default function ParticiparEvento({ route }) {
 
             <TouchableOpacity 
               style={styles.secondaryButton}
-              onPress={() => navigation.navigate('Chat', { eventoId: route.params?.eventoId })}
+              onPress={() => navigation.navigate('Chat', { eventoId: eventoId })}
             >
               <LinearGradient
                 colors={['#06b6d4', '#0891b2']}
@@ -489,11 +483,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-
   headerGradient: {
     paddingTop: 50,
   },
-
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -501,7 +493,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-
   backButton: {
     width: 44,
     height: 44,
@@ -510,12 +501,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   headerActions: {
     flexDirection: 'row',
     gap: 12,
   },
-
   headerButton: {
     width: 44,
     height: 44,
@@ -524,7 +513,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   carouselContainer: {
     position: 'relative',
     height: 280,
@@ -533,22 +521,18 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     overflow: 'hidden',
   },
-
   carouselScroll: {
     height: 280,
   },
-
   carouselItem: {
     width: screenWidth,
     height: 280,
     position: 'relative',
   },
-
   eventImage: {
     width: '100%',
     height: '100%',
   },
-
   imageOverlay: {
     position: 'absolute',
     bottom: 0,
@@ -556,7 +540,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 100,
   },
-
   pagination: {
     position: 'absolute',
     bottom: 20,
@@ -566,7 +549,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   paginationDot: {
     width: 8,
     height: 8,
@@ -574,12 +556,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.5)',
     marginHorizontal: 4,
   },
-
   activeDot: {
     backgroundColor: 'white',
     width: 24,
   },
-
   statusBadge: {
     position: 'absolute',
     top: 20,
@@ -587,18 +567,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
   },
-
   statusGradient: {
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-
   statusText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
   },
-
   eventInfo: {
     padding: 24,
     backgroundColor: '#fff',
@@ -606,27 +583,23 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
-
   eventDate: {
     fontSize: 14,
     color: '#6b7280',
     fontWeight: '600',
     marginBottom: 8,
   },
-
   eventTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 12,
   },
-
   eventDescription: {
     fontSize: 16,
     color: '#4b5563',
     lineHeight: 24,
   },
-
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -635,7 +608,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
   },
-
   tab: {
     flex: 1,
     flexDirection: 'row',
@@ -644,28 +616,23 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 8,
   },
-
   activeTab: {
     borderBottomWidth: 3,
     borderBottomColor: '#4f46e5',
   },
-
   tabLabel: {
     fontSize: 14,
     color: '#9ca3af',
     fontWeight: '600',
   },
-
   activeTabLabel: {
     color: '#4f46e5',
   },
-
   tabContent: {
     backgroundColor: '#fff',
     paddingHorizontal: 24,
     paddingBottom: 24,
   },
-
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -674,24 +641,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
   },
-
   infoTextContainer: {
     flex: 1,
     marginLeft: 12,
   },
-
   infoLabel: {
     fontSize: 12,
     color: '#6b7280',
     fontWeight: '600',
     marginBottom: 4,
   },
-
   infoText: {
     fontSize: 16,
     color: '#1f2937',
   },
-
   organizerCard: {
     backgroundColor: '#f8fafc',
     padding: 20,
@@ -700,7 +663,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-
   organizerAvatar: {
     width: 60,
     height: 60,
@@ -709,41 +671,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-
   organizerInfo: {
     flex: 1,
   },
-
   organizerName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 4,
   },
-
   organizerLabel: {
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 8,
   },
-
   organizerStats: {
     flexDirection: 'row',
     gap: 16,
   },
-
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-
   statText: {
     fontSize: 12,
     color: '#4b5563',
     fontWeight: '600',
   },
-
   priceCard: {
     backgroundColor: '#f0fdf4',
     padding: 20,
@@ -753,29 +708,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#dcfce7',
   },
-
   priceInfo: {
     marginLeft: 16,
   },
-
   priceLabel: {
     fontSize: 14,
     color: '#15803d',
     marginBottom: 4,
   },
-
   priceValue: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#15803d',
   },
-
   commentsButton: {
     marginBottom: 20,
     borderRadius: 16,
     overflow: 'hidden',
   },
-
   commentsGradient: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -783,7 +733,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-
   commentsButtonText: {
     color: '#fff',
     fontSize: 16,
@@ -791,65 +740,54 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-
   quickCommentsPreview: {
     backgroundColor: '#f8fafc',
     padding: 16,
     borderRadius: 12,
   },
-
   quickCommentsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 16,
   },
-
   commentPreview: {
     backgroundColor: '#fff',
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
   },
-
   commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-
   commentUserInfo: {
     marginLeft: 12,
   },
-
   commentUser: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 2,
   },
-
   commentRating: {
     flexDirection: 'row',
     gap: 2,
   },
-
   commentText: {
     fontSize: 14,
     color: '#4b5563',
   },
-
   actionsContainer: {
     padding: 24,
     backgroundColor: '#fff',
   },
-
   actionButton: {
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
   },
-
   gradientButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -858,24 +796,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 12,
   },
-
   buttonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
-
   secondaryActions: {
     flexDirection: 'row',
     gap: 12,
   },
-
   secondaryButton: {
     flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
   },
-
   secondaryGradient: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -884,13 +818,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
   },
-
   secondaryButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
-
   bottomSpacing: {
     height: 40,
   },

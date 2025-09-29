@@ -28,16 +28,19 @@ const RootNavigator = () => {
         <Stack.Screen name="Cadastro" component={Cadastro}></Stack.Screen>
         <Stack.Screen name="EsquecerSenha" component={EsquecerSenha}></Stack.Screen>
         <Stack.Screen name="Perfil" component={Perfil}></Stack.Screen>
-        <Stack.Screen name="FiltragemAvancada" component={FiltragemAvancada}></Stack.Screen>
+        <Stack.Screen name="PagInicial" component={PagInicial}></Stack.Screen>
+
         <Stack.Screen name="ParticiparEvento" component={ParticiparEvento}></Stack.Screen>
         <Stack.Screen name="PaginaPagamentos" component={PaginaPagamentos}></Stack.Screen>
         <Stack.Screen name="PaginaQrCode" component={PaginaQrCode}></Stack.Screen>
-        <Stack.Screen name="PagInicial" component={PagInicial}></Stack.Screen>
+
+        <Stack.Screen name="Comentario" component={Comentario}></Stack.Screen>
+        <Stack.Screen name="Chat" component={Chat}></Stack.Screen>
+
+        <Stack.Screen name="FiltragemAvancada" component={FiltragemAvancada}></Stack.Screen>
         <Stack.Screen name="EventosAbertos" component={EventosAbertos}></Stack.Screen>
         <Stack.Screen name="MeusEventos" component={MeusEventos}></Stack.Screen>
         <Stack.Screen name="Pesquisa" component={Pesquisa}></Stack.Screen>
-        <Stack.Screen name="Chat" component={Chat}></Stack.Screen>
-        <Stack.Screen name="Comentario" component={Comentario}></Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
