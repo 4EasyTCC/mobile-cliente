@@ -18,30 +18,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native'; // Importar useNavigation
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 // Definições de ícones para as categorias
 const categoriesConfig = {
-  'Festas e Shows': { emoji: '🎵', color: ['#ff6b6b', '#ee5a52'] },
-  'Congressos e Palestras': { emoji: '📚', color: ['#a855f7', '#9333ea'] },
-  'Cursos e Workshops': { emoji: '🎓', color: ['#06b6d4', '#0891b2'] },
-  'Esporte': { emoji: '🏆', color: ['#10b981', '#059669'] },
-  'Gastronomia': { emoji: '🍔', color: ['#f97316', '#ea580c'] },
-  'Games e Geek': { emoji: '🎮', color: ['#8b5cf6', '#7c3aed'] },
-  'Arte, Cultura e Lazer': { emoji: '🎨', color: ['#ec4899', '#d946ef'] },
-  'Moda e Beleza': { emoji: '💄', color: ['#f472b6', '#ec4899'] },
-  'Saúde e Bem-Estar': { emoji: '🧘‍♀️', color: ['#22c55e', '#16a34a'] },
-  'Religião e Espiritualidade': { emoji: '🙏', color: ['#6366f1', '#4f46e5'] },
-  'Teatros e Espetáculos': { emoji: '🎭', color: ['#eab308', '#d97706'] },
-  'Passeios e Tours': { emoji: '🗺️', color: ['#2563eb', '#1d4ed8'] },
-  'Infantil': { emoji: '👶', color: ['#f87171', '#ef4444'] },
-  'Grátis': { emoji: '🎁', color: ['#84cc16', '#65a30d'] },
+  // ... (keep the categoriesConfig object as it is)
 };
 
 // Componente EventCard
-const EventCard = ({ event, index, navigation }) => { // Receba a prop 'navigation'
+const EventCard = ({ event, index, navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -71,10 +58,9 @@ const EventCard = ({ event, index, navigation }) => { // Receba a prop 'navigati
       styles.eventCardContainer,
       { opacity: fadeAnim, transform: [{ scale: fadeAnim }] }
     ]}>
-      {/* Adicione o onPress para navegar para a tela de ParticiparEvento */}
-      <TouchableOpacity 
-        style={styles.eventCard} 
-        activeOpacity={0.9} 
+      <TouchableOpacity
+        style={styles.eventCard}
+        activeOpacity={0.9}
         onPress={() => navigation.navigate('ParticiparEvento', { eventoId: event.eventoId })}
       >
         <View style={styles.eventImageContainer}>
@@ -126,7 +112,7 @@ const EventCard = ({ event, index, navigation }) => { // Receba a prop 'navigati
 };
 
 // Componente EventCarusel
-function EventCarousel({ title, events, loading, navigation }) { // Receba a prop 'navigation'
+function EventCarousel({ title, events, loading, navigation }) {
   if (loading) {
     return (
       <View style={[styles.carouselContainer, { paddingHorizontal: 20 }]}>
@@ -161,7 +147,6 @@ function EventCarousel({ title, events, loading, navigation }) { // Receba a pro
         contentContainerStyle={styles.carouselContent}
       >
         {events.map((event, index) => (
-          // Passe a prop 'navigation' para o EventCard
           <EventCard key={event.eventoId} event={event} index={index} navigation={navigation} />
         ))}
       </ScrollView>
@@ -173,7 +158,7 @@ function EventCarousel({ title, events, loading, navigation }) { // Receba a pro
 const BottomNavBar = ({ activeTab, setActiveTab, navigation }) => {
   const navItems = [
     { name: 'Home', icon: 'home', screen: 'PagInicial' },
-    { name: 'Busca', icon: 'search', screen: 'Busca' },
+    { name: 'Busca', icon: 'search', screen: 'FiltragemAvancada' },
     { name: 'Favoritos', icon: 'favorite-border', screen: 'Favoritos' },
     { name: 'Perfil', icon: 'person-outline', screen: 'Perfil' },
   ];
@@ -188,7 +173,7 @@ const BottomNavBar = ({ activeTab, setActiveTab, navigation }) => {
         return;
       }
     }
-    
+
     setActiveTab(item.name);
     if (item.screen) {
       navigation.navigate(item.screen);
@@ -223,7 +208,7 @@ const BottomNavBar = ({ activeTab, setActiveTab, navigation }) => {
 };
 
 // Componente principal EventDiscoveryApp
-export default function EventDiscoveryApp({ navigation }) {
+export default function EventDiscoveryApp({ navigation, route }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState(null);
   const [activeTab, setActiveTab] = useState('Home');
@@ -236,6 +221,20 @@ export default function EventDiscoveryApp({ navigation }) {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
   const [scaleAnim] = useState(new Animated.Value(0.9));
+
+  // State for advanced filters
+  const [advancedFilters, setAdvancedFilters] = useState({});
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (route.params?.filtros) {
+        setAdvancedFilters(route.params.filtros);
+        fetchFilteredEvents(route.params.filtros);
+      } else {
+        fetchEvents();
+      }
+    }, [route.params])
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -257,7 +256,6 @@ export default function EventDiscoveryApp({ navigation }) {
       }),
     ]).start();
 
-    fetchEvents();
     fetchCategories();
   }, []);
 
@@ -285,6 +283,28 @@ export default function EventDiscoveryApp({ navigation }) {
       setLoadingEvents(false);
     }
   };
+  
+  const fetchFilteredEvents = async (filters) => {
+    setLoadingEvents(true);
+    try {
+        const response = await axios.get(`${API_URL}/api/eventos/filtrados`, {
+            params: {
+                categoria: filters.categoria || undefined,
+                preco: filters.preco || undefined,
+                localizacao: filters.usarLocalizacao ? 'Sua Cidade' : undefined, // You need to determine the user's city
+                // Add other filters here
+            }
+        });
+        setFeaturedEvents(response.data.eventos);
+        setTodayEvents([]); // Clear other lists or update them based on filtered data
+        setNearbyEvents([]);
+    } catch (error) {
+        console.error("Erro ao buscar eventos filtrados:", error);
+        Alert.alert("Erro", "Não foi possível carregar os eventos com os filtros aplicados.");
+    } finally {
+        setLoadingEvents(false);
+    }
+  };
 
   const fetchCategories = async () => {
     setLoadingCategories(true);
@@ -309,16 +329,17 @@ export default function EventDiscoveryApp({ navigation }) {
       Alert.alert('Busca', `Buscando por: ${searchTerm}`);
     }
   };
-
+  
+  const handleOpenFilters = () => {
+    navigation.navigate('FiltragemAvancada', { currentFilters: advancedFilters });
+  };
+  
   const renderContent = () => {
     switch (activeTab) {
       case 'Home':
         return (
           <>
-            <Animated.View style={[
-              styles.heroSection,
-              { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
-            ]}>
+            <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }]}>
               <View style={styles.heroContent}>
                 <Text style={styles.heroTitle}>Descubra Eventos{'\n'}Incríveis! 🎉</Text>
                 <Text style={styles.heroSubtitle}>Encontre experiências únicas na sua região</Text>
@@ -334,7 +355,7 @@ export default function EventDiscoveryApp({ navigation }) {
                       onSubmitEditing={handleSearch}
                     />
                   </View>
-                  <TouchableOpacity style={styles.filterButton}>
+                  <TouchableOpacity style={styles.filterButton} onPress={handleOpenFilters}>
                     <LinearGradient colors={['#667eea', '#764ba2']} style={styles.filterButtonGradient}>
                       <MaterialIcons name="tune" size={20} color="#fff" />
                     </LinearGradient>
@@ -342,22 +363,15 @@ export default function EventDiscoveryApp({ navigation }) {
                 </View>
               </View>
             </Animated.View>
-            <Animated.View style={[
-              styles.eventsSection,
-              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-            ]}>
-              {/* Passe a prop 'navigation' para os carrosseis */}
+            <Animated.View style={[styles.eventsSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
               <EventCarousel title="⭐ Eventos em Destaque" events={featuredEvents} loading={loadingEvents} navigation={navigation} />
               <EventCarousel title="📅 Acontecendo Hoje" events={todayEvents} loading={loadingEvents} navigation={navigation} />
               <EventCarousel title="📍 Perto de Você" events={nearbyEvents} loading={loadingEvents} navigation={navigation} />
             </Animated.View>
-            <Animated.View style={[
-              styles.categoriesSection,
-              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-            ]}>
+            <Animated.View style={[styles.categoriesSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Explore por Categoria</Text>
-                <TouchableOpacity style={styles.advancedFilterButton}>
+                <TouchableOpacity style={styles.advancedFilterButton} onPress={() => navigation.navigate('FiltragemAvancada')}>
                   <Text style={styles.advancedFilterText}>Ver todas</Text>
                   <MaterialIcons name="arrow-forward" size={16} color="#667eea" />
                 </TouchableOpacity>
@@ -414,10 +428,7 @@ export default function EventDiscoveryApp({ navigation }) {
         contentContainerStyle={styles.mainContent}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={[
-          styles.headerContainer,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
-        ]}>
+        <Animated.View style={[styles.headerContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <LinearGradient colors={['#667eea', '#764ba2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerGradient}>
             <View style={styles.header}>
               <Text style={styles.headerLogoText}>EVENTO APP</Text>
@@ -440,13 +451,11 @@ export default function EventDiscoveryApp({ navigation }) {
 
         {renderContent()}
       </ScrollView>
-      {/* Passe a prop 'navigation' para a BottomNavBar */}
       <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} navigation={navigation} />
     </SafeAreaView>
   );
 }
 
-// Estilos
 const navStyles = StyleSheet.create({
   navContainer: {
     flexDirection: 'row',
