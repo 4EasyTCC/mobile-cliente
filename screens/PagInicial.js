@@ -1,299 +1,886 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Bell, User, Search, TrendingUp, Heart, MapPin, Filter, ChevronLeft, ChevronRight, ArrowRight, Music, PartyPopper, Gamepad2, Trophy, Palette, MoreHorizontal } from 'lucide-react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  Alert,
+  Animated,
+  Dimensions,
+  StatusBar,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import axios from 'axios';
+import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native'; // Importar useNavigation
 
-const CARD_WIDTH = 280;
-const CARD_SPACING = 20;
+const { width } = Dimensions.get('window');
 
-// Mock data for events
-const eventData = [
-  { id: 1, title: 'Rock Festival 2025', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400', category: 'Shows', date: '25 Set', location: 'São Paulo' },
-  { id: 2, title: 'Tech Conference', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400', category: 'Cultural', date: '28 Set', location: 'Rio de Janeiro' },
-  { id: 3, title: 'Football Championship', image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400', category: 'Esportivo', date: '02 Out', location: 'Belo Horizonte' },
-  { id: 4, title: 'Art Exhibition', image: 'https://images.unsplash.com/photo-1544967882-6abde5fab1cb?w=400', category: 'Cultural', date: '05 Out', location: 'Salvador' },
-  { id: 5, title: 'Electronic Music Night', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', category: 'Festas', date: '08 Out', location: 'Florianópolis' },
-];
+// Definições de ícones para as categorias
+const categoriesConfig = {
+  'Festas e Shows': { emoji: '🎵', color: ['#ff6b6b', '#ee5a52'] },
+  'Congressos e Palestras': { emoji: '📚', color: ['#a855f7', '#9333ea'] },
+  'Cursos e Workshops': { emoji: '🎓', color: ['#06b6d4', '#0891b2'] },
+  'Esporte': { emoji: '🏆', color: ['#10b981', '#059669'] },
+  'Gastronomia': { emoji: '🍔', color: ['#f97316', '#ea580c'] },
+  'Games e Geek': { emoji: '🎮', color: ['#8b5cf6', '#7c3aed'] },
+  'Arte, Cultura e Lazer': { emoji: '🎨', color: ['#ec4899', '#d946ef'] },
+  'Moda e Beleza': { emoji: '💄', color: ['#f472b6', '#ec4899'] },
+  'Saúde e Bem-Estar': { emoji: '🧘‍♀️', color: ['#22c55e', '#16a34a'] },
+  'Religião e Espiritualidade': { emoji: '🙏', color: ['#6366f1', '#4f46e5'] },
+  'Teatros e Espetáculos': { emoji: '🎭', color: ['#eab308', '#d97706'] },
+  'Passeios e Tours': { emoji: '🗺️', color: ['#2563eb', '#1d4ed8'] },
+  'Infantil': { emoji: '👶', color: ['#f87171', '#ef4444'] },
+  'Grátis': { emoji: '🎁', color: ['#84cc16', '#65a30d'] },
+};
 
-export default function EventDiscoveryApp() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilter, setActiveFilter] = useState(null);
-  const [userStats, setUserStats] = useState({
-    participando: 12,
-    favoritos: 28
-  });
-  const [isVisible, setIsVisible] = useState(false);
+// Componente EventCard
+const EventCard = ({ event, index, navigation }) => { // Receba a prop 'navigation'
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    setIsVisible(true);
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        delay: index * 200,
+        useNativeDriver: true,
+      }).start();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      console.log('Searching for:', searchTerm);
-      // Navigate to search results
-    }
-  };
+  const imageUrl = event.Midia && event.Midia.length > 0
+    ? `${API_URL}${event.Midia[0].url}`
+    : 'https://via.placeholder.com/400';
+
+  const categoryInfo = categoriesConfig[event.categoria] || { emoji: '✨', color: ['#8b5cf6', '#7c3aed'] };
+
+  const eventPrice = event.Ingressos && event.Ingressos.length > 0
+    ? (event.Ingressos[0].preco > 0 ? `R$ ${parseFloat(event.Ingressos[0].preco).toFixed(2)}` : 'Gratuito')
+    : 'Gratuito';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className={`sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-white/20 transition-all duration-800 ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-8">
-              <img 
-                src="Logo oficial.png" 
-                alt="Logo oficial" 
-                className="h-12 w-auto object-contain"
-              />
-              <nav className="hidden md:flex space-x-6">
-                <a href="#" className="text-gray-600 hover:text-purple-600 transition-colors">Eventos</a>
-                <a href="#" className="text-gray-600 hover:text-purple-600 transition-colors">Categorias</a>
-                <a href="#" className="text-gray-600 hover:text-purple-600 transition-colors">Sobre</a>
-              </nav>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="relative p-2 rounded-full hover:bg-purple-50 transition-colors">
-                <Bell size={20} className="text-purple-600" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
-              </button>
-              <button className="p-2 rounded-full bg-gradient-to-r from-purple-600 to-blue-500 text-white hover:shadow-lg transition-all duration-300">
-                <User size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6">
-        {/* Hero Section */}
-        <section className={`py-12 transition-all duration-1000 delay-200 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold text-gray-800 mb-4">
-              Olá! <span className="animate-bounce inline-block">👋</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">Que tal descobrir novos eventos hoje?</p>
-            
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto mb-8">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-purple-500" size={20} />
-                <input
-                  type="text"
-                  placeholder="Buscar eventos incríveis..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSearch(e);
-                    }
-                  }}
-                  className="w-full pl-12 pr-16 py-4 bg-white rounded-full border-2 border-transparent shadow-lg focus:border-purple-300 focus:shadow-xl transition-all duration-300 text-lg"
-                />
-                <button
-                  onClick={() => console.log('Filter clicked')}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 rounded-full hover:bg-purple-50 transition-colors"
-                >
-                  <Filter size={18} className="text-purple-500" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <Calendar className="mx-auto mb-3 text-purple-600" size={32} />
-              <div className="text-2xl font-bold text-gray-800">{userStats.participando}</div>
-              <div className="text-sm text-gray-600">Participando</div>
-            </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <Heart className="mx-auto mb-3 text-red-500" size={32} />
-              <div className="text-2xl font-bold text-gray-800">{userStats.favoritos}</div>
-              <div className="text-sm text-gray-600">Favoritos</div>
-            </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <TrendingUp className="mx-auto mb-3 text-green-500" size={32} />
-              <div className="text-2xl font-bold text-gray-800">156</div>
-              <div className="text-sm text-gray-600">Descobertos</div>
-            </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 text-center shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <MapPin className="mx-auto mb-3 text-blue-500" size={32} />
-              <div className="text-2xl font-bold text-gray-800">23</div>
-              <div className="text-sm text-gray-600">Próximos</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Events Sections */}
-        <section className={`py-12 transition-all duration-1000 delay-400 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-          <div className="rounded-3xl p-8 shadow-2xl" style={{ background: 'rgba(40, 22, 178, 0.50)' }}>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8">
-              {/* Featured Events */}
-              <EventCarousel 
-                title="⭐ Eventos em Destaque"
-                events={eventData}
-              />
-
-              {/* My Events */}
-              <EventCarousel 
-                title="📅 Meus Eventos"
-                events={eventData.slice(0, 3)}
-              />
-
-              {/* Nearby Events */}
-              <EventCarousel 
-                title="📍 Perto de Você"
-                events={eventData.slice(2, 6)}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Categories Section */}
-        <section className={`py-12 transition-all duration-1000 delay-600 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-          <div className="bg-white rounded-3xl p-8 shadow-xl">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-800">🎯 Categorias</h2>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-purple-50 rounded-full text-purple-600 hover:bg-purple-100 transition-colors">
-                <span className="text-sm font-medium">Filtros avançados</span>
-                <Filter size={16} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {[
-                { name: 'Shows', icon: Music, color: 'from-red-400 to-red-600' },
-                { name: 'Festas', icon: PartyPopper, color: 'from-purple-400 to-purple-600' },
-                { name: 'Jogos', icon: Gamepad2, color: 'from-blue-400 to-blue-600' },
-                { name: 'Esportivo', icon: Trophy, color: 'from-green-400 to-green-600' },
-                { name: 'Cultural', icon: Palette, color: 'from-orange-400 to-orange-600' },
-                { name: 'Outros', icon: MoreHorizontal, color: 'from-gray-400 to-gray-600' },
-              ].map((item, index) => (
-                <button
-                  key={item.name}
-                  onClick={() => setActiveFilter(activeFilter === item.name ? null : item.name)}
-                  className={`group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:scale-105 ${
-                    activeFilter === item.name 
-                      ? 'ring-4 ring-purple-300' 
-                      : ''
-                  }`}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${
-                    activeFilter === item.name ? item.color : 'from-gray-50 to-white'
-                  } transition-all duration-300`} />
-                  <div className="relative flex flex-col items-center space-y-3">
-                    <item.icon 
-                      size={28} 
-                      className={`transition-colors duration-300 ${
-                        activeFilter === item.name ? 'text-white' : 'text-gray-600'
-                      }`}
-                    />
-                    <span className={`text-sm font-medium transition-colors duration-300 ${
-                      activeFilter === item.name ? 'text-white' : 'text-gray-700'
-                    }`}>
-                      {item.name}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer spacing */}
-      <div className="h-20" />
-    </div>
-  );
-}
-
-// Event Carousel Component
-function EventCarousel({ title, events }) {
-  const scrollRef = useRef(null);
-
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const scrollAmount = CARD_WIDTH + CARD_SPACING;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  return (
-    <div className="mb-12 last:mb-0">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-2xl font-bold text-white">{title}</h3>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-white/20 rounded-full text-white hover:bg-white/30 transition-all">
-          <span className="text-sm">Ver todos</span>
-          <ArrowRight size={16} />
-        </button>
-      </div>
-
-      <div className="relative group">
-        <button
-          onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 p-2 bg-white/20 rounded-full text-white hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100"
-        >
-          <ChevronLeft size={20} />
-        </button>
-
-        <div
-          ref={scrollRef}
-          className="flex space-x-5 overflow-x-auto scrollbar-hide pb-4"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {events.map((event, index) => (
-            <div
-              key={event.id}
-              className="flex-shrink-0 group cursor-pointer"
-              style={{ width: CARD_WIDTH }}
+    <Animated.View style={[
+      styles.eventCardContainer,
+      { opacity: fadeAnim, transform: [{ scale: fadeAnim }] }
+    ]}>
+      {/* Adicione o onPress para navegar para a tela de ParticiparEvento */}
+      <TouchableOpacity 
+        style={styles.eventCard} 
+        activeOpacity={0.9} 
+        onPress={() => navigation.navigate('ParticiparEvento', { eventoId: event.eventoId })}
+      >
+        <View style={styles.eventImageContainer}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.eventImage}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.7)']}
+            style={styles.eventImageOverlay}
+          />
+          <View style={styles.dateBadge}>
+            <Text style={styles.dateBadgeText}>{new Date(event.dataInicio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</Text>
+          </View>
+          <TouchableOpacity style={styles.favoriteButton}>
+            <MaterialIcons name="favorite-border" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.eventDetails}>
+          <View style={styles.eventHeader}>
+            <Text style={styles.eventTitle} numberOfLines={2}>{event.nomeEvento}</Text>
+            <View style={[styles.categoryBadge, { backgroundColor: categoryInfo.color[0] + '20' }]}>
+              <Text style={[styles.categoryBadgeText, { color: categoryInfo.color[0] }]}>{event.categoria}</Text>
+            </View>
+          </View>
+          <View style={styles.eventInfo}>
+            <View style={styles.eventInfoItem}>
+              <MaterialIcons name="place" size={14} color="#6b7280" />
+              <Text style={styles.eventLocation}>{event.localizacao?.cidade || 'Online'}</Text>
+            </View>
+            <View style={styles.eventInfoItem}>
+              <MaterialIcons name="attach-money" size={14} color="#6b7280" />
+              <Text style={styles.eventPrice}>{eventPrice}</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.joinButton}>
+            <LinearGradient
+              colors={['#667eea', '#764ba2']}
+              style={styles.joinButtonGradient}
             >
-              <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
-                <div className="relative h-40 overflow-hidden">
-                  <img
-                    src={event.image}
-                    alt={event.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-3 flex items-center space-x-2 text-white text-sm">
-                    <Calendar size={14} />
-                    <span>{event.date}</span>
-                  </div>
-                  <div className="absolute top-3 right-3">
-                    <button className="p-2 bg-white/20 rounded-full text-white hover:bg-white/30 transition-all">
-                      <Heart size={16} />
-                    </button>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <h4 className="font-semibold text-gray-800 mb-2 line-clamp-2">{event.title}</h4>
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <MapPin size={12} />
-                      <span>{event.location}</span>
-                    </div>
-                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
-                      {event.category}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              <Text style={styles.joinButtonText}>Participar</Text>
+              <MaterialIcons name="arrow-forward" size={16} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
-        <button
-          onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 p-2 bg-white/20 rounded-full text-white hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100"
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
-    </div>
+// Componente EventCarusel
+function EventCarousel({ title, events, loading, navigation }) { // Receba a prop 'navigation'
+  if (loading) {
+    return (
+      <View style={[styles.carouselContainer, { paddingHorizontal: 20 }]}>
+        <Text style={[styles.carouselTitle, { color: '#6b7280' }]}>Carregando...</Text>
+      </View>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <View style={[styles.carouselContainer, { paddingHorizontal: 20 }]}>
+        <Text style={[styles.carouselTitle, { color: '#6b7280' }]}>{title}</Text>
+        <Text style={{ color: '#9ca3af', marginTop: 10 }}>Nenhum evento encontrado nesta seção.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.carouselContainer}>
+      <View style={styles.carouselHeader}>
+        <Text style={styles.carouselTitle}>{title}</Text>
+        <TouchableOpacity style={styles.viewAllButton}>
+          <Text style={styles.viewAllText}>Ver todos</Text>
+          <MaterialIcons name="arrow-forward" size={16} color="#667eea" />
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={width * 0.8 + 16}
+        decelerationRate="fast"
+        contentContainerStyle={styles.carouselContent}
+      >
+        {events.map((event, index) => (
+          // Passe a prop 'navigation' para o EventCard
+          <EventCard key={event.eventoId} event={event} index={index} navigation={navigation} />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
+
+// Componente da Barra de Navegação
+const BottomNavBar = ({ activeTab, setActiveTab, navigation }) => {
+  const navItems = [
+    { name: 'Home', icon: 'home', screen: 'PagInicial' },
+    { name: 'Busca', icon: 'search', screen: 'Busca' },
+    { name: 'Favoritos', icon: 'favorite-border', screen: 'Favoritos' },
+    { name: 'Perfil', icon: 'person-outline', screen: 'Perfil' },
+  ];
+
+  const handlePress = async (item) => {
+    if (item.screen === 'Perfil') {
+      const userToken = await AsyncStorage.getItem('userToken');
+      if (!userToken) {
+        Alert.alert('Acesso negado', 'Você precisa estar logado para ver seu perfil.', [
+          { text: 'Ir para o Login', onPress: () => navigation.navigate('Login') }
+        ]);
+        return;
+      }
+    }
+    
+    setActiveTab(item.name);
+    if (item.screen) {
+      navigation.navigate(item.screen);
+    }
+  };
+
+  return (
+    <View style={navStyles.navContainer}>
+      {navItems.map((item) => (
+        <TouchableOpacity
+          key={item.name}
+          style={navStyles.navItem}
+          onPress={() => handlePress(item)}
+        >
+          <MaterialIcons
+            name={item.icon}
+            size={24}
+            color={activeTab === item.name ? '#667eea' : '#9ca3af'}
+          />
+          <Text
+            style={[
+              navStyles.navText,
+              { color: activeTab === item.name ? '#667eea' : '#9ca3af' },
+            ]}
+          >
+            {item.name}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+
+// Componente principal EventDiscoveryApp
+export default function EventDiscoveryApp({ navigation }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [activeTab, setActiveTab] = useState('Home');
+  const [featuredEvents, setFeaturedEvents] = useState([]);
+  const [todayEvents, setTodayEvents] = useState([]);
+  const [nearbyEvents, setNearbyEvents] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
+  const [scaleAnim] = useState(new Animated.Value(0.9));
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    fetchEvents();
+    fetchCategories();
+  }, []);
+
+  const fetchEvents = async () => {
+    setLoadingEvents(true);
+    try {
+      const featuredResponse = await axios.get(`${API_URL}/api/eventos/home`, {
+        params: { limite: 5 }
+      });
+      setFeaturedEvents(featuredResponse.data.eventos);
+
+      const todayResponse = await axios.get(`${API_URL}/api/eventos/home`, {
+        params: { periodo: 'hoje', limite: 3 }
+      });
+      setTodayEvents(todayResponse.data.eventos);
+
+      const nearbyResponse = await axios.get(`${API_URL}/api/eventos/home`, {
+        params: { limite: 5 }
+      });
+      setNearbyEvents(nearbyResponse.data.eventos);
+    } catch (error) {
+      console.error("Erro ao buscar eventos:", error);
+      Alert.alert("Erro", "Não foi possível carregar os eventos. Verifique se o backend está ativo e acessível.");
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const response = await axios.get(`${API_URL}/api/eventos/categorias`);
+      const formattedCategories = response.data.map(name => ({
+        name: name,
+        emoji: categoriesConfig[name]?.emoji || '✨',
+        color: categoriesConfig[name]?.color || ['#8b5cf6', '#7c3aed'],
+      }));
+      setAllCategories(formattedCategories);
+    } catch (error) {
+      console.error("Erro ao buscar categorias:", error);
+      Alert.alert("Erro", "Não foi possível carregar as categorias.");
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const handleSearch = () => {
+    if (searchTerm.trim()) {
+      Alert.alert('Busca', `Buscando por: ${searchTerm}`);
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'Home':
+        return (
+          <>
+            <Animated.View style={[
+              styles.heroSection,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }
+            ]}>
+              <View style={styles.heroContent}>
+                <Text style={styles.heroTitle}>Descubra Eventos{'\n'}Incríveis! 🎉</Text>
+                <Text style={styles.heroSubtitle}>Encontre experiências únicas na sua região</Text>
+                <View style={styles.searchContainer}>
+                  <View style={styles.searchInputContainer}>
+                    <Feather name="search" size={20} color="#667eea" style={styles.searchIcon} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="O que você procura?"
+                      placeholderTextColor="#9ca3af"
+                      value={searchTerm}
+                      onChangeText={setSearchTerm}
+                      onSubmitEditing={handleSearch}
+                    />
+                  </View>
+                  <TouchableOpacity style={styles.filterButton}>
+                    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.filterButtonGradient}>
+                      <MaterialIcons name="tune" size={20} color="#fff" />
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
+            <Animated.View style={[
+              styles.eventsSection,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+            ]}>
+              {/* Passe a prop 'navigation' para os carrosseis */}
+              <EventCarousel title="⭐ Eventos em Destaque" events={featuredEvents} loading={loadingEvents} navigation={navigation} />
+              <EventCarousel title="📅 Acontecendo Hoje" events={todayEvents} loading={loadingEvents} navigation={navigation} />
+              <EventCarousel title="📍 Perto de Você" events={nearbyEvents} loading={loadingEvents} navigation={navigation} />
+            </Animated.View>
+            <Animated.View style={[
+              styles.categoriesSection,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+            ]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Explore por Categoria</Text>
+                <TouchableOpacity style={styles.advancedFilterButton}>
+                  <Text style={styles.advancedFilterText}>Ver todas</Text>
+                  <MaterialIcons name="arrow-forward" size={16} color="#667eea" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.categoriesGrid}>
+                {loadingCategories ? (
+                  <Text style={styles.loadingText}>Carregando categorias...</Text>
+                ) : (
+                  allCategories.map((item, index) => (
+                    <Animated.View key={item.name} style={[styles.categoryCardWrapper, { transform: [{ scale: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }]}>
+                      <TouchableOpacity
+                        onPress={() => setActiveFilter(activeFilter === item.name ? null : item.name)}
+                        style={[styles.categoryCard, activeFilter === item.name && styles.categoryCardActive]}
+                      >
+                        <LinearGradient colors={activeFilter === item.name ? item.color : ['#ffffff', '#f8fafc']} style={styles.categoryGradient}>
+                          <View style={styles.categoryContent}>
+                            <View style={styles.categoryIconContainer}>
+                              <Text style={styles.categoryEmoji}>{item.emoji}</Text>
+                            </View>
+                            <Text style={[styles.categoryText, { color: activeFilter === item.name ? '#fff' : '#374151' }]}>
+                              {item.name}
+                            </Text>
+                          </View>
+                        </LinearGradient>
+                        {activeFilter === item.name && (
+                          <View style={styles.activeIndicator}>
+                            <MaterialIcons name="check-circle" size={20} color="#fff" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  ))
+                )}
+              </View>
+            </Animated.View>
+          </>
+        );
+      case 'Busca':
+        return <View style={styles.placeholderScreen}><Text style={styles.placeholderText}>Tela de Busca</Text></View>;
+      case 'Favoritos':
+        return <View style={styles.placeholderScreen}><Text style={styles.placeholderText}>Tela de Favoritos</Text></View>;
+      case 'Perfil':
+        return <View style={styles.placeholderScreen}><Text style={styles.placeholderText}>Tela de Perfil</Text></View>;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.mainContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={[
+          styles.headerContainer,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+        ]}>
+          <LinearGradient colors={['#667eea', '#764ba2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerGradient}>
+            <View style={styles.header}>
+              <Text style={styles.headerLogoText}>EVENTO APP</Text>
+              <View style={styles.headerRight}>
+                <TouchableOpacity style={styles.iconButton}>
+                  <MaterialIcons name="notifications" size={24} color="#fff" />
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationText}>3</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.userButton}>
+                  <LinearGradient colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']} style={styles.userButtonGradient}>
+                    <MaterialIcons name="person" size={24} color="#fff" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+
+        {renderContent()}
+      </ScrollView>
+      {/* Passe a prop 'navigation' para a BottomNavBar */}
+      <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} navigation={navigation} />
+    </SafeAreaView>
+  );
+}
+
+// Estilos
+const navStyles = StyleSheet.create({
+  navContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 10,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+});
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  mainContent: {
+    paddingBottom: 80,
+  },
+  headerContainer: {
+    marginBottom: -20,
+    zIndex: 10,
+  },
+  headerGradient: {
+    paddingBottom: 40,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  headerLogoText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  logo: {
+    width: 100,
+    height: 40,
+    resizeMode: 'contain',
+    tintColor: '#fff',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    padding: 12,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginRight: 12,
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#ff6b6b',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  notificationText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  userButton: {
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  userButtonGradient: {
+    padding: 12,
+  },
+  heroSection: {
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 30,
+  },
+  heroContent: {
+    alignItems: 'center',
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  searchContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#374151',
+  },
+  filterButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  filterButtonGradient: {
+    padding: 14,
+  },
+  eventsSection: {
+    marginBottom: 30,
+  },
+  carouselContainer: {
+    marginBottom: 32,
+  },
+  carouselHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  carouselTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+  },
+  viewAllText: {
+    color: '#667eea',
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  carouselContent: {
+    paddingHorizontal: 20,
+  },
+  eventCardContainer: {
+    width: width * 0.8,
+    marginRight: 16,
+  },
+  eventCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  eventImageContainer: {
+    height: 180,
+    position: 'relative',
+  },
+  eventImage: {
+    width: '100%',
+    height: '100%',
+  },
+  eventImageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+  },
+  dateBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  dateBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 8,
+    borderRadius: 20,
+  },
+  eventDetails: {
+    padding: 16,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  eventTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginRight: 8,
+  },
+  categoryBadge: {
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  categoryBadgeText: {
+    color: '#6366f1',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  eventInfo: {
+    marginBottom: 16,
+  },
+  eventInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  eventLocation: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 6,
+  },
+  eventPrice: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  joinButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  joinButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
+  joinButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  categoriesSection: {
+    paddingHorizontal: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  advancedFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+  },
+  advancedFilterText: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  categoryCardWrapper: {
+    width: (width - 64) / 2,
+  },
+  categoryCard: {
+    aspectRatio: 1.3,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  categoryCardActive: {
+    shadowColor: '#667eea',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  categoryGradient: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryContent: {
+    alignItems: 'center',
+  },
+  categoryIconContainer: {
+    marginBottom: 12,
+  },
+  categoryEmoji: {
+    fontSize: 32,
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    padding: 2,
+  },
+  placeholderScreen: {
+    flex: 1,
+    height: 500,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  placeholderText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ccc',
+    textAlign: 'center',
+  },
+  loadingText: {
+    color: '#6b7280',
+    fontSize: 16,
+    paddingHorizontal: 20,
+  },
+  bottomTabBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  tabIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+  },
+  tabIconText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+});

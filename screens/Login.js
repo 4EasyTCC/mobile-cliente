@@ -1,3 +1,4 @@
+// Login.js
 import React, { useState } from "react";
 import {
   View,
@@ -11,7 +12,6 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from "@env";
 
 export default function Login({ navigation }) {
@@ -20,82 +20,26 @@ export default function Login({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    // Validação dos campos
     if (!email || !senha) {
       Alert.alert("Erro", "Preencha todos os campos!");
-      return;
-    }
-
-    // Validação básica do email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      Alert.alert("Erro", "Digite um email válido!");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Fazendo a requisição para o backend
-      const response = await axios.post(`${API_URL}/auth/login`, {
+      const response = await axios.post(`${API_URL}/login/convidado`, {
         email: email.toLowerCase().trim(),
         senha,
       });
 
       if (response.status === 200) {
-        const { token, organizador, user } = response.data;
-        
-        // Salvando os dados do usuário no AsyncStorage
-        await AsyncStorage.setItem('userToken', token);
-        await AsyncStorage.setItem('userData', JSON.stringify(organizador || user));
-        
-        console.log("Usuário logado:", organizador || user);
-        
-        Alert.alert(
-          "Sucesso", 
-          "Login realizado com sucesso!",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.navigate("PagInicial")
-            }
-          ]
-        );
+        Alert.alert("Sucesso", "Login realizado com sucesso!");
+        navigation.navigate("PagInicial");
       }
     } catch (error) {
-      console.error("Erro no login:", error);
-      
-      if (error.response) {
-        // Erro do servidor com resposta
-        const statusCode = error.response.status;
-        const errorMessage = error.response.data?.message || error.response.data?.error;
-        
-        switch (statusCode) {
-          case 400:
-            Alert.alert("Erro", errorMessage || "Dados inválidos!");
-            break;
-          case 401:
-            Alert.alert("Erro", "Email ou senha incorretos!");
-            break;
-          case 404:
-            Alert.alert("Erro", "Usuário não encontrado!");
-            break;
-          case 500:
-            Alert.alert("Erro", "Erro interno do servidor. Tente novamente mais tarde.");
-            break;
-          default:
-            Alert.alert("Erro", errorMessage || "Erro ao fazer login.");
-        }
-      } else if (error.request) {
-        // Erro de conexão
-        Alert.alert(
-          "Erro de Conexão", 
-          "Não foi possível conectar ao servidor. Verifique sua conexão com a internet."
-        );
-      } else {
-        // Outro tipo de erro
-        Alert.alert("Erro", "Erro inesperado. Tente novamente.");
-      }
+      console.error("Erro ao fazer login:", error);
+      Alert.alert("Erro", "Email ou senha incorretos.");
     } finally {
       setLoading(false);
     }
@@ -106,41 +50,28 @@ export default function Login({ navigation }) {
       <Image source={require("../assets/Logo4easy.jpeg")} style={styles.logo} />
 
       <View style={styles.tabContainer}>
-        <Text style={styles.activeTab}>
-          LOGIN
-        </Text>
+        <Text style={styles.activeTab}>LOGIN</Text>
         <TouchableOpacity onPress={() => navigation.navigate("Cadastro")}>
           <Text style={styles.inactiveTab}>CADASTRAR</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.inputContainer}>
-        <MaterialIcons
-          name="email"
-          size={20}
-          color="#4525a4"
-          style={styles.icon}
-        />
+        <MaterialIcons name="email" size={20} color="#4525a4" style={styles.icon} />
         <TextInput
           style={styles.input}
           placeholder="EMAIL"
           placeholderTextColor="#aaa"
-          value={email}
-          onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
           editable={!loading}
         />
       </View>
 
       <View style={styles.inputContainer}>
-        <MaterialIcons 
-          name="lock" 
-          size={20} 
-          color="#4525a4" 
-          style={styles.icon} 
-        />
+        <MaterialIcons name="lock" size={20} color="#4525a4" style={styles.icon} />
         <TextInput
           style={styles.input}
           placeholder="SENHA"
@@ -148,40 +79,29 @@ export default function Login({ navigation }) {
           secureTextEntry
           value={senha}
           onChangeText={setSenha}
-          autoCapitalize="none"
-          autoCorrect={false}
           editable={!loading}
         />
       </View>
 
       <TouchableOpacity onPress={handleLogin} disabled={loading}>
-        <LinearGradient 
-          colors={loading ? ['#ccc', '#999'] : ['#4525a4', '#1868fd']} 
+        <LinearGradient
+          colors={loading ? ["#ccc", "#999"] : ["#4525a4", "#1868fd"]}
           start={{ x: 1, y: 0 }}
           end={{ x: 0, y: 0 }}
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, styles.shadow, loading && styles.buttonDisabled]}
         >
           <Text style={styles.buttonText}>
-            {loading ? "ENTRANDO..." : "LOGIN"}
+            {loading ? "ENTRANDO..." : "ENTRAR"}
           </Text>
         </LinearGradient>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        onPress={() => navigation.navigate("EsquecerSenha")}
-        disabled={loading}
-      >
-        <Text style={styles.footer}>
-          <Text style={styles.link}>Esqueci a senha</Text>
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
+      <TouchableOpacity
         onPress={() => navigation.navigate("Cadastro")}
         disabled={loading}
       >
         <Text style={styles.footer}>
-          Não possui uma conta? <Text style={styles.link}>Cadastre-se</Text>
+          Não tem uma conta? <Text style={styles.link}>Cadastre-se</Text>
         </Text>
       </TouchableOpacity>
     </View>
@@ -191,7 +111,7 @@ export default function Login({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF",
+    backgroundColor: "#fff",
     paddingHorizontal: 30,
     justifyContent: "center",
     alignItems: "center",
@@ -207,16 +127,15 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   activeTab: {
-    fontFamily: "MontserratBold",
     marginHorizontal: 20,
     fontSize: 16,
     color: "#4525a4",
     borderBottomWidth: 2,
     borderBottomColor: "#4525a4",
     paddingBottom: 5,
+    fontWeight: "bold",
   },
   inactiveTab: {
-    fontFamily: "Montserrat",
     marginHorizontal: 20,
     fontSize: 16,
     color: "#aaa",
@@ -237,28 +156,35 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 45,
-    fontFamily: "Montserrat",
     color: "#333",
   },
   button: {
-    width: "100%",
-    paddingVertical: 15,
-    paddingHorizontal: 120,
-    borderRadius: 10,
+    // Aumentado o padding horizontal para maior largura
+    paddingHorizontal: 40,
+    paddingVertical: 18,
+    borderRadius: 12,
     alignItems: "center",
     marginBottom: 15,
-    padding: 10,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    fontFamily: "MontserratBold",
     color: "white",
     fontSize: 16,
+    fontWeight: "bold",
+  },
+  shadow: {
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   footer: {
-    fontFamily: "Montserrat",
     color: "#666",
     fontSize: 14,
   },
