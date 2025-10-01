@@ -19,15 +19,32 @@ import axios from 'axios';
 import { API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import * as NavigationBar from 'expo-navigation-bar'; // Biblioteca de navegação do sistema
+
+// GARANTINDO A IMPORTAÇÃO CORRETA DA LOGO LOCAL
+const LOGO_BRANCA = require('../imagens/branca.png'); 
 
 const { width } = Dimensions.get('window');
 
-// Definições de ícones para as categorias
+// Definições de ícones para as categorias (mantido para contexto)
 const categoriesConfig = {
-  // ... (keep the categoriesConfig object as it is)
+  'Festas e Shows': { emoji: '🎵', color: ['#ff6b6b', '#ee5a52'] },
+  'Congressos e Palestras': { emoji: '📚', color: ['#a855f7', '#9333ea'] },
+  'Cursos e Workshops': { emoji: '🎓', color: ['#06b6d4', '#0891b2'] },
+  'Esporte': { emoji: '🏆', color: ['#10b981', '#059669'] },
+  'Gastronomia': { emoji: '🍔', color: ['#f97316', '#ea580c'] },
+  'Games e Geek': { emoji: '🎮', color: ['#8b5cf6', '#7c3aed'] },
+  'Arte, Cultura e Lazer': { emoji: '🎨', color: ['#ec4899', '#d946ef'] },
+  'Moda e Beleza': { emoji: '💄', color: ['#f472b6', '#ec4899'] },
+  'Saúde e Bem-Estar': { emoji: '🧘‍♀️', color: ['#22c55e', '#16a34a'] },
+  'Religião e Espiritualidade': { emoji: '🙏', color: ['#6366f1', '#4f46e5'] },
+  'Teatros e Espetáculos': { emoji: '🎭', color: ['#eab308', '#d97706'] },
+  'Passeios e Tours': { emoji: '🗺️', color: ['#2563eb', '#1d4ed8'] },
+  'Infantil': { emoji: '👶', color: ['#f87171', '#ef4444'] },
+  'Grátis': { emoji: '🎁', color: ['#84cc16', '#65a30d'] },
 };
 
-// Componente EventCard
+// Componente EventCard (mantido como está)
 const EventCard = ({ event, index, navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -111,7 +128,7 @@ const EventCard = ({ event, index, navigation }) => {
   );
 };
 
-// Componente EventCarusel
+// Componente EventCarusel (mantido como está)
 function EventCarousel({ title, events, loading, navigation }) {
   if (loading) {
     return (
@@ -154,7 +171,7 @@ function EventCarousel({ title, events, loading, navigation }) {
   );
 }
 
-// Componente da Barra de Navegação
+// Componente da Barra de Navegação (mantido como está)
 const BottomNavBar = ({ activeTab, setActiveTab, navigation }) => {
   const navItems = [
     { name: 'Home', icon: 'home', screen: 'PagInicial' },
@@ -222,17 +239,44 @@ export default function EventDiscoveryApp({ navigation, route }) {
   const [slideAnim] = useState(new Animated.Value(50));
   const [scaleAnim] = useState(new Animated.Value(0.9));
 
-  // State for advanced filters
   const [advancedFilters, setAdvancedFilters] = useState({});
 
+  // 2. USEFOCUS EFFECT PARA GERENCIAR A BARRA DE NAVEGAÇÃO
   useFocusEffect(
     React.useCallback(() => {
+      // 3. OCULTAR A BARRA AO ENTRAR NA TELA (ANDROID)
+      const hideNavigationBar = async () => {
+        try {
+          await NavigationBar.setVisibilityAsync('hidden');
+          // Opcional: Define como a barra deve se comportar se for arrastada (swipe)
+          await NavigationBar.setBehaviorAsync('overlay-swipe');
+        } catch (error) {
+          console.warn('Erro ao tentar ocultar a barra de navegação:', error);
+        }
+      };
+
+      // 4. RESTAURAR A BARRA AO SAIR DA TELA (CLEANUP)
+      const showNavigationBar = async () => {
+        try {
+          await NavigationBar.setVisibilityAsync('visible');
+        } catch (error) {
+          console.warn('Erro ao tentar mostrar a barra de navegação:', error);
+        }
+      };
+
+      hideNavigationBar();
+
       if (route.params?.filtros) {
         setAdvancedFilters(route.params.filtros);
         fetchFilteredEvents(route.params.filtros);
       } else {
         fetchEvents();
       }
+
+      // Retorna a função de limpeza para restaurar a barra quando a tela perde o foco
+      return () => {
+        showNavigationBar();
+      };
     }, [route.params])
   );
 
@@ -291,12 +335,12 @@ export default function EventDiscoveryApp({ navigation, route }) {
             params: {
                 categoria: filters.categoria || undefined,
                 preco: filters.preco || undefined,
-                localizacao: filters.usarLocalizacao ? 'Sua Cidade' : undefined, // You need to determine the user's city
+                localizacao: filters.usarLocalizacao ? 'Sua Cidade' : undefined, 
                 // Add other filters here
             }
         });
         setFeaturedEvents(response.data.eventos);
-        setTodayEvents([]); // Clear other lists or update them based on filtered data
+        setTodayEvents([]); 
         setNearbyEvents([]);
     } catch (error) {
         console.error("Erro ao buscar eventos filtrados:", error);
@@ -422,6 +466,7 @@ export default function EventDiscoveryApp({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Manter a StatusBar, mas a barra de navegação inferior será oculta */}
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <ScrollView
         style={styles.scrollView}
@@ -431,7 +476,7 @@ export default function EventDiscoveryApp({ navigation, route }) {
         <Animated.View style={[styles.headerContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <LinearGradient colors={['#667eea', '#764ba2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerGradient}>
             <View style={styles.header}>
-              <Text style={styles.headerLogoText}>EVENTO APP</Text>
+              <Image source={LOGO_BRANCA} style={styles.headerLogoImage} resizeMode="contain" />
               <View style={styles.headerRight}>
                 <TouchableOpacity style={styles.iconButton}>
                   <MaterialIcons name="notifications" size={24} color="#fff" />
@@ -451,11 +496,14 @@ export default function EventDiscoveryApp({ navigation, route }) {
 
         {renderContent()}
       </ScrollView>
+      {/* O BottomNavBar do seu app ainda será visível dentro do seu conteúdo, 
+          mas a barra de navegação nativa do Android (sistema) estará oculta. */}
       <BottomNavBar activeTab={activeTab} setActiveTab={setActiveTab} navigation={navigation} />
     </SafeAreaView>
   );
 }
 
+// Estilos (sem alterações)
 const navStyles = StyleSheet.create({
   navContainer: {
     flexDirection: 'row',
@@ -464,7 +512,7 @@ const navStyles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
-    paddingVertical: 10,
+    paddingVertical: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -512,17 +560,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  headerLogoText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+  // ESTILO AJUSTADO PARA A LOGO (150px)
+  headerLogoImage: {
+    width: 80, // Largura ajustada para 150px
+    height: 100, 
   },
-  logo: {
-    width: 100,
-    height: 40,
-    resizeMode: 'contain',
-    tintColor: '#fff',
-  },
+  
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
