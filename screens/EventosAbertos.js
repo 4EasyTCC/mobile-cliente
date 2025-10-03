@@ -15,20 +15,24 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = 140;
-const CARD_HEIGHT = 100;
+const CARD_WIDTH = 180;
+const CARD_HEIGHT = 150;
 const CARD_SPACING = 16;
 
 export default function EventosAbertos({ navigation }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [eventosData, setEventosData] = useState({});
   const [categorias, setCategorias] = useState([]);
+  const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   // Função para buscar dados do backend
   const fetchEventosData = async () => {
     try {
+      setLoading(true);
+      
+      // Substitua pela sua URL da API
       // const response = await fetch('https://sua-api.com/eventos/abertos');
       // const data = await response.json();
       
@@ -38,31 +42,35 @@ export default function EventosAbertos({ navigation }) {
         eventos: {
           Shows: Array.from({ length: 6 }, (_, i) => ({
             id: i + 1,
-            nome: `Evento ${i + 1}`,
-            data: '25 Dez',
-            local: 'São Paulo',
-            imagem: '../assets/show.jpg'
+            title: `Rock Festival ${i + 1}`,
+            date: '25 Dez',
+            location: 'São Paulo',
+            image: `https://example.com/images/show-${i + 1}.jpg`,
+            fallbackImage: require('../assets/show.jpg')
           })),
           Festas: Array.from({ length: 6 }, (_, i) => ({
             id: i + 7,
-            nome: `Festa ${i + 1}`,
-            data: '26 Dez',
-            local: 'Rio de Janeiro',
-            imagem: '../assets/show.jpg'
+            title: `Festa Premium ${i + 1}`,
+            date: '26 Dez',
+            location: 'Rio de Janeiro',
+            image: `https://example.com/images/festa-${i + 1}.jpg`,
+            fallbackImage: require('../assets/show.jpg')
           })),
           Jogos: Array.from({ length: 6 }, (_, i) => ({
             id: i + 13,
-            nome: `Jogo ${i + 1}`,
-            data: '27 Dez',
-            local: 'Brasília',
-            imagem: '../assets/show.jpg'
+            title: `Championship ${i + 1}`,
+            date: '27 Dez',
+            location: 'Brasília',
+            image: `https://example.com/images/jogo-${i + 1}.jpg`,
+            fallbackImage: require('../assets/show.jpg')
           })),
           Cultural: Array.from({ length: 6 }, (_, i) => ({
             id: i + 19,
-            nome: `Evento Cultural ${i + 1}`,
-            data: '28 Dez',
-            local: 'Salvador',
-            imagem: '../assets/show.jpg'
+            title: `Exposição Arte ${i + 1}`,
+            date: '28 Dez',
+            location: 'Salvador',
+            image: `https://example.com/images/cultural-${i + 1}.jpg`,
+            fallbackImage: require('../assets/show.jpg')
           }))
         }
       };
@@ -71,6 +79,11 @@ export default function EventosAbertos({ navigation }) {
       setEventosData(mockData.eventos);
     } catch (error) {
       console.error('Erro ao buscar eventos:', error);
+      // Fallback para dados mockados em caso de erro
+      setCategorias(['Shows', 'Festas', 'Jogos', 'Cultural']);
+      setEventosData({});
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -128,7 +141,7 @@ export default function EventosAbertos({ navigation }) {
               colors={['#4525a4', '#1868fd']}
               style={styles.profileGradient}
             >
-              <Icon name="account" size={24} color="#FFF" />
+              <Icon name="account" size={28} color="#FFF" />
             </LinearGradient>
           </TouchableOpacity>
         </Animated.View>
@@ -200,6 +213,7 @@ export default function EventosAbertos({ navigation }) {
                   title={categoria} 
                   navigation={navigation}
                   eventos={eventosData[categoria] || []}
+                  loading={loading}
                 />
               ))}
             </View>
@@ -212,91 +226,108 @@ export default function EventosAbertos({ navigation }) {
   );
 }
 
-function Carousel({ title, navigation, eventos = [] }) {
+function Carousel({ title, navigation, eventos = [], loading }) {
   const scrollRef = useRef(null);
-  const scrollPosition = useRef(0);
 
-  const scrollBy = (distance) => {
-    if (!scrollRef.current) return;
-    scrollPosition.current += distance;
-    if (scrollPosition.current < 0) scrollPosition.current = 0;
-    scrollRef.current.scrollTo({ x: scrollPosition.current, animated: true });
+  // Componente de loading para os cards
+  const LoadingCard = () => (
+    <View style={[styles.card, styles.loadingCard]}>
+      <View style={styles.loadingPlaceholder} />
+    </View>
+  );
+
+  // Componente de card de evento
+  const EventCard = ({ evento, index }) => {
+    const [imageError, setImageError] = useState(false);
+    
+    const imageSource = imageError || !evento?.image 
+      ? evento?.fallbackImage || require('../assets/show.jpg')
+      : { uri: evento.image };
+
+    return (
+      <View style={styles.eventCardWrapper}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('ParticiparEvento', { eventoId: evento?.id })}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={imageSource}
+            style={styles.cardImage}
+            resizeMode="cover"
+            onError={() => setImageError(true)}
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.7)']}
+            style={styles.cardOverlay}
+          />
+        </TouchableOpacity>
+        <View style={styles.eventInfo}>
+          <Text style={styles.eventTitle} numberOfLines={2}>
+            {evento?.title || `Evento ${index + 1}`}
+          </Text>
+          <View style={styles.eventDateContainer}>
+            <Icon name="calendar" size={14} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.eventDate}>
+              {evento?.date || '25 Dez'}
+            </Text>
+          </View>
+          <View style={styles.eventLocationContainer}>
+            <Icon name="map-marker" size={14} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.eventLocation} numberOfLines={1}>
+              {evento?.location || 'Local'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
   };
 
   return (
     <View style={styles.carousel}>
       <View style={styles.carouselHeader}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        <TouchableOpacity style={styles.seeAllButton}>
-          <Text style={styles.seeAllText}>Ver todos</Text>
-          <Icon name="arrow-right" size={16} color="rgba(255,255,255,0.8)" />
-        </TouchableOpacity>
       </View>
 
-      <View style={styles.carouselRow}>
-        <TouchableOpacity 
-          style={styles.arrowButton}
-          onPress={() => scrollBy(-CARD_WIDTH * 2)}
-        >
-          <Icon name="chevron-left" size={24} color="rgba(255,255,255,0.9)" />
-        </TouchableOpacity>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.cardsContainer}
+        decelerationRate="fast"
+        snapToInterval={CARD_WIDTH + CARD_SPACING}
+        snapToAlignment="start"
+        style={styles.carouselScroll}
+      >
+        {loading ? (
+          // Mostra placeholders durante o loading
+          Array.from({ length: 5 }).map((_, index) => (
+            <View key={`loading-${index}`} style={styles.eventCardWrapper}>
+              <LoadingCard />
+              <View style={styles.eventInfo}>
+                <View style={[styles.loadingText, { width: '80%', height: 16 }]} />
+                <View style={[styles.loadingText, { width: '60%', height: 14, marginTop: 6 }]} />
+                <View style={[styles.loadingText, { width: '50%', height: 14, marginTop: 4 }]} />
+              </View>
+            </View>
+          ))
+        ) : (
+          // Mostra os dados reais
+          eventos.map((evento, index) => (
+            <EventCard key={evento?.id || index} evento={evento} index={index} />
+          ))
+        )}
+      </ScrollView>
 
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardsContainer}
-          onScroll={(event) => {
-            scrollPosition.current = event.nativeEvent.contentOffset.x;
-          }}
-          scrollEventThrottle={16}
-          decelerationRate="fast"
-          snapToInterval={CARD_WIDTH + CARD_SPACING}
-          snapToAlignment="start"
+      {!loading && (
+        <TouchableOpacity
+          style={styles.loadMoreButton}
+          onPress={() => navigation.navigate('EventosPorCategoria', { categoria: title })}
         >
-          {eventos.map((evento, i) => (
-            <TouchableOpacity
-              key={evento.id || i}
-              style={styles.card}
-              onPress={() => navigation.navigate('ParticiparEvento', { eventoId: evento.id })}
-              activeOpacity={0.8}
-            >
-              <Image
-                source={require('../assets/show.jpg')}
-                style={styles.cardImage}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.7)']}
-                style={styles.cardOverlay}
-              >
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {evento.nome || `Evento ${i + 1}`}
-                  </Text>
-                  <View style={styles.cardInfo}>
-                    <Icon name="calendar" size={12} color="#FFF" />
-                    <Text style={styles.cardDate}>{evento.data || '25 Dez'}</Text>
-                  </View>
-                  <View style={styles.cardInfo}>
-                    <Icon name="map-marker" size={12} color="#FFF" />
-                    <Text style={styles.cardLocation} numberOfLines={1}>
-                      {evento.local || 'Local'}
-                    </Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <TouchableOpacity 
-          style={styles.arrowButton}
-          onPress={() => scrollBy(CARD_WIDTH * 2)}
-        >
-          <Icon name="chevron-right" size={24} color="rgba(255,255,255,0.9)" />
+          <Text style={styles.loadMoreButtonText}>Ver todos</Text>
+          <Icon name="arrow-right" size={18} color="rgba(255,255,255,0.9)" />
         </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 }
@@ -334,19 +365,19 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 120,
-    height: 70,
+    width: 160,
+    height: 110,
   },
 
   profileButton: {
-    borderRadius: 22,
+    borderRadius: 25,
     overflow: 'hidden',
   },
 
   profileGradient: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -436,43 +467,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  seeAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  seeAllText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  carouselRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  arrowButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 8,
+  carouselScroll: {
+    paddingLeft: 10,
   },
 
   cardsContainer: {
     flexDirection: 'row',
-    paddingRight: 10,
+    paddingRight: 30,
+  },
+
+  eventCardWrapper: {
+    marginRight: CARD_SPACING,
   },
 
   card: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: 15,
-    marginRight: CARD_SPACING,
     overflow: 'hidden',
     backgroundColor: '#FFF',
     shadowColor: '#000',
@@ -492,39 +503,85 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '70%',
-    justifyContent: 'flex-end',
-    padding: 12,
+    height: '40%',
   },
 
-  cardContent: {
-    gap: 4,
+  eventInfo: {
+    paddingTop: 12,
+    paddingHorizontal: 4,
   },
 
-  cardTitle: {
+  eventTitle: {
     color: '#FFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+
+  eventDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 4,
   },
 
-  cardInfo: {
+  eventDate: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  eventLocationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
 
-  cardDate: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-
-  cardLocation: {
-    color: '#FFF',
-    fontSize: 11,
+  eventLocation: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
     fontWeight: '500',
     flex: 1,
+  },
+
+  /* Carregar todos - Nova posição */
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignSelf: 'center',
+    minWidth: 120,
+  },
+
+  loadMoreButtonText: { 
+    color: '#FFF', 
+    fontSize: 15, 
+    fontWeight: '600',
+    marginRight: 8,
+  },
+
+  /* Estados de loading */
+  loadingCard: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+
+  loadingPlaceholder: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 15,
+  },
+
+  loadingText: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 4,
   },
 
   bottomSpacing: {
