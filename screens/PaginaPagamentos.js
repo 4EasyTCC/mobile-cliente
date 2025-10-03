@@ -1,3 +1,4 @@
+// PaginaPagamentos.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,14 +13,54 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { API_URL } from "@env"; 
+
+
+// Função auxiliar para obter o Token JWT
+const getToken = async () => {
+  try {
+    // Usando a chave correta
+    const token = await AsyncStorage.getItem('@user_token'); 
+    return token;
+  } catch (e) {
+    console.error("Erro ao ler token do AsyncStorage:", e);
+    return null;
+  }
+};
+
+// NOVO: Função de adesão ao grupo
+const aderirAoGrupo = async (token, eventoId) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/grupos/aderir`, // Nova rota no backend
+      { eventoId: eventoId },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    // Retorna o grupoId e nome do grupo (se o backend retornar)
+    return response.data.grupoId;
+  } catch (error) {
+    console.error("Erro ao aderir ao grupo:", error.response?.data || error.message);
+    // Se o grupo não existir (404) ou já for membro (200), retorna null para não travar
+    return null; 
+  }
+};
+
 
 export default function PaginaPagamentos() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { eventoId, valor, nomeEvento } = route.params;
+  const { eventoId, valor, nomeEvento, ingressoId } = route.params; 
 
   const [cupom, setCupom] = useState('');
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('pix');
   const [priceDetails, setPriceDetails] = useState({
     subtotal: valor,
     desconto: 0,
@@ -27,16 +68,15 @@ export default function PaginaPagamentos() {
     total: valor + 5.00,
   });
 
-  const [paymentMethod, setPaymentMethod] = useState('pix');
-
   useEffect(() => {
-    // Simular a aplicação de um cupom
     const aplicarCupom = () => {
       let novoDesconto = 0;
-      if (cupom.toLowerCase() === 'simulacao10') { // Cupom de simulação
+      if (cupom.toLowerCase() === 'simulacao10' && priceDetails.subtotal > 0) {
         novoDesconto = priceDetails.subtotal * 0.10;
       }
-      const novoTotal = priceDetails.subtotal + priceDetails.taxas - novoDesconto;
+      
+      const novoTotal = Math.max(0, priceDetails.subtotal + priceDetails.taxas - novoDesconto);
+      
       setPriceDetails(prev => ({
         ...prev,
         desconto: novoDesconto,
@@ -46,18 +86,81 @@ export default function PaginaPagamentos() {
     aplicarCupom();
   }, [cupom, priceDetails.subtotal, priceDetails.taxas]);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (!ingressoId) {
+      Alert.alert('Erro', 'Ingresso inválido. Não é possível finalizar.');
+      return;
+    }
+    
+    const token = await getToken();
+    if (!token) {
+        Alert.alert('Erro de Autenticação', 'Você precisa estar logado para comprar um ingresso.');
+        return;
+    }
+
     setLoading(true);
-    // Simulação de um delay de processamento
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert(
-        'Pagamento Simulado com Sucesso! 🎉',
-        `Seu ingresso para o evento "${nomeEvento}" foi confirmado. Este é apenas um teste, nenhum valor foi cobrado.`
+
+    try {
+      // 1. Simular delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 2. CHAMADA PARA O BACKEND: Registra participação (status='Confirmado')
+      const response = await axios.post(
+        `${API_URL}/participar/evento/${ingressoId}`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
       );
-      // Você pode navegar para uma tela de confirmação de sucesso
-      // navigation.navigate('ConfirmacaoPagamento');
-    }, 2000); // Delay de 2 segundos para simular o processamento
+      
+      // Assumindo que o backend retorna sucesso/201 e o eventoId
+      if (response.data.success) {
+        const idDoEvento = response.data.eventoId || eventoId; 
+        let mensagem = `Seu ingresso para o evento "${nomeEvento}" foi confirmado.`;
+        let grupoId = null;
+        
+        // 3. ADERIR AO GRUPO DE CHAT
+        grupoId = await aderirAoGrupo(token, idDoEvento);
+        
+        if (grupoId) {
+            mensagem += " Você foi adicionado ao chat do evento!";
+        }
+        
+        setLoading(false);
+
+        Alert.alert(
+          'Pagamento Simulado com Sucesso! 🎉',
+          mensagem,
+          [
+            {
+              text: "IR PARA CHATS",
+              onPress: () => {
+                // Navega para a nova lista de chats
+                navigation.navigate('ListaChatsScreen'); 
+              }
+            },
+            {
+              text: "OK",
+              onPress: () => {
+                // Volta para a página inicial (que irá recarregar o status)
+                navigation.navigate('PagInicial', { eventoId: idDoEvento });
+              }
+            }
+          ]
+        );
+      } else {
+        setLoading(false);
+        Alert.alert('Erro', response.data.message || 'Erro ao confirmar a participação.');
+      }
+
+    } catch (error) {
+      setLoading(false);
+      console.error('Erro no pagamento:', error.response?.data || error.message);
+      const mensagemErro = error.response?.data?.message || 'Erro de conexão ou no servidor. Tente novamente.';
+      Alert.alert('Erro de Pagamento', mensagemErro);
+    }
   };
 
   return (

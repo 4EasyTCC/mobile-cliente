@@ -1,27 +1,45 @@
+// ParticiparEvento.js
 import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Image,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Dimensions,
   Animated,
   StatusBar,
   Share,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native'; // Adicionado useFocusEffect
 import axios from 'axios';
-import { API_URL } from '@env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { API_URL } from "@env"; 
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Função auxiliar para obter o Token JWT
+const getToken = async () => {
+  try {
+    const token = await AsyncStorage.getItem('@user_token');
+    return token;
+  } catch (e) {
+    console.error("Erro ao ler token do AsyncStorage:", e);
+    return null;
+  }
+};
+
 export default function ParticiparEvento({ route }) {
+  const navigation = useNavigation();
+  const { eventoId } = route.params;
+
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [statusEvento, setStatusEvento] = useState('Não Participa');
   const [activeTab, setActiveTab] = useState('detalhes');
@@ -33,29 +51,53 @@ export default function ParticiparEvento({ route }) {
     nomeDono: 'Carregando...',
     endereco: 'Carregando endereço...',
     tipo: 'Carregando...',
-    restricoes: 'Carregando...',
+    restricoes: 'Nenhuma restrição',
     horarioInicio: '00:00',
     horarioFim: '00:00',
     data: '00/00/0000',
     imagens: [],
+    ingressoId: null, // ID do ingresso principal
   });
-  
+
   const scrollRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  const navigation = useNavigation();
 
-  // Obtenha o eventoId da rota
-  const { eventoId } = route.params;
+  // FUNÇÃO PARA VERIFICAR O STATUS DE PARTICIPAÇÃO NO BACKEND
+  const fetchStatusParticipacao = async (id) => {
+    try {
+      const token = await getToken();
+      if (!token) return 'Não Participa';
+
+      const response = await axios.get(`${API_URL}/participacao/evento/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      return response.data.status; // Retorna 'Participa' ou 'Não Participa'
+    } catch (error) {
+      console.error('Erro ao buscar status de participação:', error.response?.data || error.message);
+      return 'Não Participa';
+    }
+  };
 
   const fetchEventoData = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${API_URL}/api/eventos/${eventoId}`);
       const data = response.data.evento;
-      
+
       const ingressos = data.Ingressos || [];
-      const preco = ingressos.length > 0 ? parseFloat(ingressos[0].preco) : 0;
+      // Usamos o ID do primeiro ingresso para a participação simulada
+      const ingressoPrincipal = ingressos.length > 0 ? ingressos[0] : null; 
+      const preco = ingressoPrincipal ? parseFloat(ingressoPrincipal.preco) : 0;
+      const ingressoId = ingressoPrincipal ? ingressoPrincipal.ingressoId : null;
+
       const imagens = data.Midia || [];
+
+      // 1. ATUALIZA O STATUS DE PARTICIPAÇÃO DO USUÁRIO LOGADO
+      const currentStatus = await fetchStatusParticipacao(eventoId);
+      setStatusEvento(currentStatus);
 
       setEventoData({
         nome: data.nomeEvento,
@@ -68,30 +110,31 @@ export default function ParticiparEvento({ route }) {
         horarioInicio: data.horaInicio,
         horarioFim: data.horaFim,
         data: new Date(data.dataInicio).toLocaleDateString('pt-BR'),
-        imagens: imagens.map(media => `${API_URL}${media.url}`)
+        imagens: imagens.map(media => `${API_URL}${media.url}`),
+        ingressoId: ingressoId, // Passa o ID do ingresso
       });
+
+      // 2. Inicia animações
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      ]).start();
+
     } catch (error) {
       console.error('Erro ao buscar dados do evento:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os detalhes do evento. Verifique se o backend está ativo e o ID do evento é válido.');
+      Alert.alert('Erro', 'Não foi possível carregar os detalhes do evento.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    fetchEventoData();
-  }, [eventoId]); // Recarregue se o ID do evento mudar
+  // Usa useFocusEffect para recarregar quando a tela estiver focada (retorna do pagamento)
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchEventoData();
+      // Opcional: Adicionar lógica de limpeza se necessário
+    }, [eventoId])
+  );
 
   const handleScroll = (event) => {
     const contentOffset = event.nativeEvent.contentOffset.x;
@@ -106,20 +149,6 @@ export default function ParticiparEvento({ route }) {
     });
   };
 
-  const handleBotaoAcao = () => {
-    if (statusEvento === 'Não Participa') {
-      setStatusEvento('Pendente');
-    } else if (statusEvento === 'Participa') {
-      setStatusEvento('Não Participa');
-    } else if (statusEvento === 'Pendente') {
-      navigation.navigate('PaginaPagamentos', {
-        eventoId: eventoId,
-        valor: eventoData.preco,
-        nomeEvento: eventoData.nome
-      });
-    }
-  };
-
   const handleConvite = async () => {
     try {
       await Share.share({
@@ -131,19 +160,43 @@ export default function ParticiparEvento({ route }) {
     }
   };
 
+
+  const handleBotaoAcao = () => {
+    if (statusEvento === 'Participa') {
+      Alert.alert('Status', 'Sua participação já está CONFIRMADA!');
+      return;
+    } 
+    
+    if (!eventoData.ingressoId) {
+        Alert.alert('Erro', 'Nenhum ingresso disponível para compra.');
+        return;
+    }
+    
+    // Redireciona para o pagamento
+    setStatusEvento('Pendente'); // Simula a transição para o estado de checkout
+    navigation.navigate('PaginaPagamentos', {
+        eventoId: eventoId,
+        valor: eventoData.preco,
+        nomeEvento: eventoData.nome,
+        ingressoId: eventoData.ingressoId, // NOVO DADO
+    });
+  };
+
   const renderBotaoAcao = () => {
     let texto = '';
     let icone = '';
     let coresGradiente = ['#4f46e5', '#3b82f6'];
+    let isDisabled = false;
     
     if (statusEvento === 'Não Participa') {
       texto = 'Participar';
       icone = 'plus-circle';
       coresGradiente = ['#10b981', '#059669'];
     } else if (statusEvento === 'Participa') {
-      texto = 'Cancelar';
-      icone = 'close-circle';
-      coresGradiente = ['#ef4444', '#dc2626'];
+      texto = 'Confirmado';
+      icone = 'check-circle';
+      coresGradiente = ['#4f46e5', '#3b82f6']; // Cor de confirmação
+      isDisabled = true;
     } else if (statusEvento === 'Pendente') {
       texto = 'Finalizar Pagamento';
       icone = 'credit-card';
@@ -155,6 +208,7 @@ export default function ParticiparEvento({ route }) {
         style={styles.actionButton}
         onPress={handleBotaoAcao}
         activeOpacity={0.8}
+        disabled={isDisabled}
       >
         <LinearGradient colors={coresGradiente} style={styles.gradientButton}>
           <Icon name={icone} size={24} color="#fff" />
@@ -163,7 +217,7 @@ export default function ParticiparEvento({ route }) {
       </TouchableOpacity>
     );
   };
-
+  
   const renderTabContent = () => {
     switch (activeTab) {
       case 'detalhes':
@@ -301,6 +355,15 @@ export default function ParticiparEvento({ route }) {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4f46e5" />
+        <Text style={styles.loadingText}>Carregando Evento...</Text>
+      </View>
+    );
+  }
+
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#4f46e5" />
@@ -376,12 +439,12 @@ export default function ParticiparEvento({ route }) {
 
           <View style={styles.statusBadge}>
             <LinearGradient
-              colors={statusEvento === 'Participa' ? ['#10b981', '#059669'] : 
+              colors={statusEvento === 'Participa' ? ['#4f46e5', '#3b82f6'] : 
                       statusEvento === 'Pendente' ? ['#f59e0b', '#d97706'] : 
                       ['#6b7280', '#4b5563']}
               style={styles.statusGradient}
             >
-              <Text style={styles.statusText}>{statusEvento}</Text>
+              <Text style={styles.statusText}>{statusEvento === 'Participa' ? 'CONFIRMADO' : statusEvento}</Text>
             </LinearGradient>
           </View>
         </View>
@@ -482,6 +545,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#4f46e5',
   },
   headerGradient: {
     paddingTop: 50,

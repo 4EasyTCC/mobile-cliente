@@ -14,6 +14,7 @@ import Pesquisa from "../screens/Pesquisa";
 import PaginaQrCode from "../screens/PaginaQrCode";
 import Chat from "../screens/Chat"
 import Comentario from "../screens/Comentario"
+import GrupoScreen from "../screens/GrupoScreen";
 
 const Stack = createStackNavigator();
 
@@ -22,7 +23,7 @@ const RootNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName="PagInicial"
+        initialRouteName="Login"
       >
         <Stack.Screen name="Login" component={Login}></Stack.Screen>
         <Stack.Screen name="Cadastro" component={Cadastro}></Stack.Screen>
@@ -36,6 +37,7 @@ const RootNavigator = () => {
 
         <Stack.Screen name="Comentario" component={Comentario}></Stack.Screen>
         <Stack.Screen name="Chat" component={Chat}></Stack.Screen>
+        <Stack.Screen name="GrupoScreen" component={GrupoScreen}></Stack.Screen>
 
         <Stack.Screen name="FiltragemAvancada" component={FiltragemAvancada}></Stack.Screen>
       </Stack.Navigator>
