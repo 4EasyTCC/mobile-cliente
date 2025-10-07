@@ -1,22 +1,22 @@
 // ParticiparEvento.js
 import React, { useRef, useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  Animated,
-  StatusBar,
-  Share,
-  Alert,
-  ActivityIndicator
+    View,
+    Text,
+    StyleSheet,
+    Image,
+    TouchableOpacity,
+    ScrollView,
+    Dimensions,
+    Animated,
+    StatusBar,
+    Share,
+    Alert,
+    ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNavigation, useFocusEffect } from '@react-navigation/native'; // Adicionado useFocusEffect
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -26,878 +26,886 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Função auxiliar para obter o Token JWT
 const getToken = async () => {
-  try {
-    const token = await AsyncStorage.getItem('@user_token');
-    return token;
-  } catch (e) {
-    console.error("Erro ao ler token do AsyncStorage:", e);
-    return null;
-  }
+    try {
+        const token = await AsyncStorage.getItem('@user_token');
+        return token;
+    } catch (e) {
+        console.error("Erro ao ler token do AsyncStorage:", e);
+        return null;
+    }
 };
 
 export default function ParticiparEvento({ route }) {
-  const navigation = useNavigation();
-  const { eventoId } = route.params;
+    const navigation = useNavigation();
+    
+    // CORREÇÃO APLICADA AQUI: Adiciona || {} para evitar o crash se route.params for undefined.
+    const { eventoId } = route.params || {}; 
 
-  const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [statusEvento, setStatusEvento] = useState('Não Participa');
-  const [activeTab, setActiveTab] = useState('detalhes');
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [eventoData, setEventoData] = useState({
-    nome: 'Carregando...',
-    descricao: 'Carregando descrição...',
-    preco: 0,
-    nomeDono: 'Carregando...',
-    endereco: 'Carregando endereço...',
-    tipo: 'Carregando...',
-    restricoes: 'Nenhuma restrição',
-    horarioInicio: '00:00',
-    horarioFim: '00:00',
-    data: '00/00/0000',
-    imagens: [],
-    ingressoId: null, // ID do ingresso principal
-  });
+    const [loading, setLoading] = useState(true);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [statusEvento, setStatusEvento] = useState('Não Participa');
+    const [activeTab, setActiveTab] = useState('detalhes');
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [eventoData, setEventoData] = useState({
+        nome: 'Carregando...',
+        descricao: 'Carregando descrição...',
+        preco: 0,
+        nomeDono: 'Carregando...',
+        endereco: 'Carregando endereço...',
+        tipo: 'Carregando...',
+        restricoes: 'Nenhuma restrição',
+        horarioInicio: '00:00',
+        horarioFim: '00:00',
+        data: '00/00/0000',
+        imagens: [],
+        ingressoId: null, // ID do ingresso principal
+    });
 
-  const scrollRef = useRef(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+    const scrollRef = useRef(null);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
 
-  // FUNÇÃO PARA VERIFICAR O STATUS DE PARTICIPAÇÃO NO BACKEND
-  const fetchStatusParticipacao = async (id) => {
-    try {
-      const token = await getToken();
-      if (!token) return 'Não Participa';
+    // FUNÇÃO PARA VERIFICAR O STATUS DE PARTICIPAÇÃO NO BACKEND
+    const fetchStatusParticipacao = async (id) => {
+        try {
+            const token = await getToken();
+            if (!token) return 'Não Participa';
 
-      const response = await axios.get(`${API_URL}/participacao/evento/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+            const response = await axios.get(`${API_URL}/participacao/evento/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            return response.data.status; // Retorna 'Participa' ou 'Não Participa'
+        } catch (error) {
+            console.error('Erro ao buscar status de participação:', error.response?.data || error.message);
+            return 'Não Participa';
         }
-      });
-      return response.data.status; // Retorna 'Participa' ou 'Não Participa'
-    } catch (error) {
-      console.error('Erro ao buscar status de participação:', error.response?.data || error.message);
-      return 'Não Participa';
-    }
-  };
+    };
 
-  const fetchEventoData = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/api/eventos/${eventoId}`);
-      const data = response.data.evento;
+    const fetchEventoData = async () => {
+        if (!eventoId) {
+             Alert.alert('Erro', 'ID do evento não fornecido. Não é possível carregar.');
+             setLoading(false);
+             return; // Sai da função se não tiver ID
+        }
+        
+        setLoading(true);
+        try {
+            const response = await axios.get(`${API_URL}/api/eventos/${eventoId}`);
+            const data = response.data.evento;
 
-      const ingressos = data.Ingressos || [];
-      // Usamos o ID do primeiro ingresso para a participação simulada
-      const ingressoPrincipal = ingressos.length > 0 ? ingressos[0] : null; 
-      const preco = ingressoPrincipal ? parseFloat(ingressoPrincipal.preco) : 0;
-      const ingressoId = ingressoPrincipal ? ingressoPrincipal.ingressoId : null;
+            const ingressos = data.Ingressos || [];
+            // Usamos o ID do primeiro ingresso para a participação simulada
+            const ingressoPrincipal = ingressos.length > 0 ? ingressos[0] : null; 
+            const preco = ingressoPrincipal ? parseFloat(ingressoPrincipal.preco) : 0;
+            const ingressoId = ingressoPrincipal ? ingressoPrincipal.ingressoId : null;
 
-      const imagens = data.Midia || [];
+            const imagens = data.Midia || [];
 
-      // 1. ATUALIZA O STATUS DE PARTICIPAÇÃO DO USUÁRIO LOGADO
-      const currentStatus = await fetchStatusParticipacao(eventoId);
-      setStatusEvento(currentStatus);
+            // 1. ATUALIZA O STATUS DE PARTICIPAÇÃO DO USUÁRIO LOGADO
+            const currentStatus = await fetchStatusParticipacao(eventoId);
+            setStatusEvento(currentStatus);
 
-      setEventoData({
-        nome: data.nomeEvento,
-        descricao: data.descEvento,
-        preco: preco,
-        nomeDono: data.organizador?.nome || 'Organizador desconhecido',
-        endereco: data.localizacao?.endereco || 'Localização não informada',
-        tipo: data.categoria || 'Categoria não informada',
-        restricoes: data.restricoes || 'Nenhuma restrição',
-        horarioInicio: data.horaInicio,
-        horarioFim: data.horaFim,
-        data: new Date(data.dataInicio).toLocaleDateString('pt-BR'),
-        imagens: imagens.map(media => `${API_URL}${media.url}`),
-        ingressoId: ingressoId, // Passa o ID do ingresso
-      });
+            setEventoData({
+                nome: data.nomeEvento,
+                descricao: data.descEvento,
+                preco: preco,
+                nomeDono: data.organizador?.nome || 'Organizador desconhecido',
+                endereco: data.localizacao?.endereco || 'Localização não informada',
+                tipo: data.categoria || 'Categoria não informada',
+                restricoes: data.restricoes || 'Nenhuma restrição',
+                horarioInicio: data.horaInicio,
+                horarioFim: data.horaFim,
+                data: new Date(data.dataInicio).toLocaleDateString('pt-BR'),
+                imagens: imagens.map(media => `${API_URL}${media.url}`),
+                ingressoId: ingressoId, // Passa o ID do ingresso
+            });
 
-      // 2. Inicia animações
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-      ]).start();
+            // 2. Inicia animações
+            Animated.parallel([
+                Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+                Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+            ]).start();
 
-    } catch (error) {
-      console.error('Erro ao buscar dados do evento:', error);
-      Alert.alert('Erro', 'Não foi possível carregar os detalhes do evento.');
-    } finally {
-      setLoading(false);
-    }
-  };
+        } catch (error) {
+            console.error('Erro ao buscar dados do evento:', error);
+            Alert.alert('Erro', 'Não foi possível carregar os detalhes do evento.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  // Usa useFocusEffect para recarregar quando a tela estiver focada (retorna do pagamento)
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchEventoData();
-      // Opcional: Adicionar lógica de limpeza se necessário
-    }, [eventoId])
-  );
-
-  const handleScroll = (event) => {
-    const contentOffset = event.nativeEvent.contentOffset.x;
-    const index = Math.round(contentOffset / screenWidth);
-    setCurrentIndex(index);
-  };
-
-  const scrollToIndex = (index) => {
-    scrollRef.current?.scrollTo({
-      x: index * screenWidth,
-      animated: true,
-    });
-  };
-
-  const handleConvite = async () => {
-    try {
-      await Share.share({
-        message: `🎉 Venha comigo para o ${eventoData.nome}! 🎵\n\n📅 ${eventoData.data}\n📍 ${eventoData.endereco}\n💰 R$ ${eventoData.preco.toFixed(2)}\n\nVai ser incrível! 🔥`,
-        title: `Convite para ${eventoData.nome}`,
-      });
-    } catch (error) {
-      console.error('Erro ao compartilhar:', error);
-    }
-  };
-
-
-  const handleBotaoAcao = () => {
-    if (statusEvento === 'Participa') {
-      Alert.alert('Status', 'Sua participação já está CONFIRMADA!');
-      return;
-    } 
-    
-    if (!eventoData.ingressoId) {
-        Alert.alert('Erro', 'Nenhum ingresso disponível para compra.');
-        return;
-    }
-    
-    // Redireciona para o pagamento
-    setStatusEvento('Pendente'); // Simula a transição para o estado de checkout
-    navigation.navigate('PaginaPagamentos', {
-        eventoId: eventoId,
-        valor: eventoData.preco,
-        nomeEvento: eventoData.nome,
-        ingressoId: eventoData.ingressoId, // NOVO DADO
-    });
-  };
-
-  const renderBotaoAcao = () => {
-    let texto = '';
-    let icone = '';
-    let coresGradiente = ['#4f46e5', '#3b82f6'];
-    let isDisabled = false;
-    
-    if (statusEvento === 'Não Participa') {
-      texto = 'Participar';
-      icone = 'plus-circle';
-      coresGradiente = ['#10b981', '#059669'];
-    } else if (statusEvento === 'Participa') {
-      texto = 'Confirmado';
-      icone = 'check-circle';
-      coresGradiente = ['#4f46e5', '#3b82f6']; // Cor de confirmação
-      isDisabled = true;
-    } else if (statusEvento === 'Pendente') {
-      texto = 'Finalizar Pagamento';
-      icone = 'credit-card';
-      coresGradiente = ['#f59e0b', '#d97706'];
-    }
-
-    return (
-      <TouchableOpacity 
-        style={styles.actionButton}
-        onPress={handleBotaoAcao}
-        activeOpacity={0.8}
-        disabled={isDisabled}
-      >
-        <LinearGradient colors={coresGradiente} style={styles.gradientButton}>
-          <Icon name={icone} size={24} color="#fff" />
-          <Text style={styles.buttonText}>{texto}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+    // Usa useFocusEffect para recarregar quando a tela estiver focada (retorna do pagamento)
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchEventoData();
+            // Opcional: Adicionar lógica de limpeza se necessário
+        }, [eventoId])
     );
-  };
-  
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'detalhes':
+
+    const handleScroll = (event) => {
+        const contentOffset = event.nativeEvent.contentOffset.x;
+        const index = Math.round(contentOffset / screenWidth);
+        setCurrentIndex(index);
+    };
+
+    const scrollToIndex = (index) => {
+        scrollRef.current?.scrollTo({
+            x: index * screenWidth,
+            animated: true,
+        });
+    };
+
+    const handleConvite = async () => {
+        try {
+            await Share.share({
+                message: `🎉 Venha comigo para o ${eventoData.nome}! 🎵\n\n📅 ${eventoData.data}\n📍 ${eventoData.endereco}\n💰 R$ ${eventoData.preco.toFixed(2)}\n\nVai ser incrível! 🔥`,
+                title: `Convite para ${eventoData.nome}`,
+            });
+        } catch (error) {
+            console.error('Erro ao compartilhar:', error);
+        }
+    };
+
+
+    const handleBotaoAcao = () => {
+        if (statusEvento === 'Participa') {
+            Alert.alert('Status', 'Sua participação já está CONFIRMADA!');
+            return;
+        } 
+        
+        if (!eventoData.ingressoId) {
+            Alert.alert('Erro', 'Nenhum ingresso disponível para compra.');
+            return;
+        }
+        
+        // Redireciona para o pagamento
+        setStatusEvento('Pendente'); // Simula a transição para o estado de checkout
+        navigation.navigate('PaginaPagamentos', {
+            eventoId: eventoId,
+            valor: eventoData.preco,
+            nomeEvento: eventoData.nome,
+            ingressoId: eventoData.ingressoId, // NOVO DADO
+        });
+    };
+
+    const renderBotaoAcao = () => {
+        let texto = '';
+        let icone = '';
+        let coresGradiente = ['#4f46e5', '#3b82f6'];
+        let isDisabled = false;
+        
+        if (statusEvento === 'Não Participa') {
+            texto = 'Participar';
+            icone = 'plus-circle';
+            coresGradiente = ['#10b981', '#059669'];
+        } else if (statusEvento === 'Participa') {
+            texto = 'Confirmado';
+            icone = 'check-circle';
+            coresGradiente = ['#4f46e5', '#3b82f6']; // Cor de confirmação
+            isDisabled = true;
+        } else if (statusEvento === 'Pendente') {
+            texto = 'Finalizar Pagamento';
+            icone = 'credit-card';
+            coresGradiente = ['#f59e0b', '#d97706'];
+        }
+
         return (
-          <View style={styles.tabContent}>
-            <View style={styles.infoCard}>
-              <Icon name="map-marker" size={20} color="#4f46e5" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Localização</Text>
-                <Text style={styles.infoText}>{eventoData.endereco}</Text>
-              </View>
-            </View>
-
-            <View style={styles.infoCard}>
-              <Icon name="tag" size={20} color="#4f46e5" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Categoria</Text>
-                <Text style={styles.infoText}>{eventoData.tipo}</Text>
-              </View>
-            </View>
-
-            <View style={styles.infoCard}>
-              <Icon name="clock" size={20} color="#4f46e5" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Horário</Text>
-                <Text style={styles.infoText}>{eventoData.horarioInicio} - {eventoData.horarioFim}</Text>
-              </View>
-            </View>
-
-            <View style={styles.infoCard}>
-              <Icon name="information" size={20} color="#4f46e5" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Restrições</Text>
-                <Text style={styles.infoText}>{eventoData.restricoes}</Text>
-              </View>
-            </View>
-          </View>
-        );
-      
-      case 'organizador':
-        return (
-          <View style={styles.tabContent}>
-            <View style={styles.organizerCard}>
-              <LinearGradient
-                colors={['#4f46e5', '#3b82f6']}
-                style={styles.organizerAvatar}
-              >
-                <Icon name="account" size={40} color="#fff" />
-              </LinearGradient>
-              <View style={styles.organizerInfo}>
-                <Text style={styles.organizerName}>{eventoData.nomeDono}</Text>
-                <Text style={styles.organizerLabel}>Organizador do Evento</Text>
-                <View style={styles.organizerStats}>
-                  <View style={styles.statItem}>
-                    <Icon name="calendar-check" size={16} color="#10b981" />
-                    <Text style={styles.statText}>12 eventos</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Icon name="star" size={16} color="#f59e0b" />
-                    <Text style={styles.statText}>4.8</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.priceCard}>
-              <Icon name="currency-usd" size={24} color="#10b981" />
-              <View style={styles.priceInfo}>
-                <Text style={styles.priceLabel}>Valor do Ingresso</Text>
-                <Text style={styles.priceValue}>R$ {eventoData.preco.toFixed(2)}</Text>
-              </View>
-            </View>
-          </View>
-        );
-      
-      case 'comentarios':
-        return (
-          <View style={styles.tabContent}>
             <TouchableOpacity 
-              style={styles.commentsButton}
-              onPress={() => navigation.navigate('Comentario', {
-                eventoId: eventoId,
-                eventoData: eventoData
-              })}
+                style={styles.actionButton}
+                onPress={handleBotaoAcao}
+                activeOpacity={0.8}
+                disabled={isDisabled}
             >
-              <LinearGradient
-                colors={['#8b5cf6', '#a855f7']}
-                style={styles.commentsGradient}
-              >
-                <Icon name="comment-multiple" size={24} color="#fff" />
-                <Text style={styles.commentsButtonText}>Ver Todos os Comentários</Text>
-                <Icon name="arrow-right" size={20} color="#fff" />
-              </LinearGradient>
+                <LinearGradient colors={coresGradiente} style={styles.gradientButton}>
+                    <Icon name={icone} size={24} color="#fff" />
+                    <Text style={styles.buttonText}>{texto}</Text>
+                </LinearGradient>
             </TouchableOpacity>
-
-            <View style={styles.quickCommentsPreview}>
-              <Text style={styles.quickCommentsTitle}>Últimos Comentários</Text>
-              
-              <View style={styles.commentPreview}>
-                <View style={styles.commentHeader}>
-                  <Icon name="account-circle" size={32} color="#4f46e5" />
-                  <View style={styles.commentUserInfo}>
-                    <Text style={styles.commentUser}>Maria Santos</Text>
-                    <View style={styles.commentRating}>
-                      {[...Array(5)].map((_, i) => (
-                        <Icon key={i} name="star" size={12} color="#fbbf24" />
-                      ))}
-                    </View>
-                  </View>
-                </View>
-                <Text style={styles.commentText}>Evento incrível! Super recomendo!</Text>
-              </View>
-
-              <View style={styles.commentPreview}>
-                <View style={styles.commentHeader}>
-                  <Icon name="account-circle" size={32} color="#4f46e5" />
-                  <View style={styles.commentUserInfo}>
-                    <Text style={styles.commentUser}>Carlos Lima</Text>
-                    <View style={styles.commentRating}>
-                      {[...Array(4)].map((_, i) => (
-                        <Icon key={i} name="star" size={12} color="#fbbf24" />
-                      ))}
-                      <Icon name="star-outline" size={12} color="#d1d5db" />
-                    </View>
-                  </View>
-                </View>
-                <Text style={styles.commentText}>Muito bom, valeu a pena!</Text>
-              </View>
-            </View>
-          </View>
         );
-      
-      default:
-        return null;
-    }
-  };
+    };
+    
+    const renderTabContent = () => {
+        switch (activeTab) {
+            case 'detalhes':
+                return (
+                    <View style={styles.tabContent}>
+                        <View style={styles.infoCard}>
+                            <Icon name="map-marker" size={20} color="#4f46e5" />
+                            <View style={styles.infoTextContainer}>
+                                <Text style={styles.infoLabel}>Localização</Text>
+                                <Text style={styles.infoText}>{eventoData.endereco}</Text>
+                            </View>
+                        </View>
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4f46e5" />
-        <Text style={styles.loadingText}>Carregando Evento...</Text>
-      </View>
-    );
-  }
+                        <View style={styles.infoCard}>
+                            <Icon name="tag" size={20} color="#4f46e5" />
+                            <View style={styles.infoTextContainer}>
+                                <Text style={styles.infoLabel}>Categoria</Text>
+                                <Text style={styles.infoText}>{eventoData.tipo}</Text>
+                            </View>
+                        </View>
 
-  return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor="#4f46e5" />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.headerGradient}>
-          <View style={styles.header}>
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
-              <Icon name="arrow-left" size={24} color="#fff" />
-            </TouchableOpacity>
+                        <View style={styles.infoCard}>
+                            <Icon name="clock" size={20} color="#4f46e5" />
+                            <View style={styles.infoTextContainer}>
+                                <Text style={styles.infoLabel}>Horário</Text>
+                                <Text style={styles.infoText}>{eventoData.horarioInicio} - {eventoData.horarioFim}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.infoCard}>
+                            <Icon name="information" size={20} color="#4f46e5" />
+                            <View style={styles.infoTextContainer}>
+                                <Text style={styles.infoLabel}>Restrições</Text>
+                                <Text style={styles.infoText}>{eventoData.restricoes}</Text>
+                            </View>
+                        </View>
+                    </View>
+                );
             
-            <View style={styles.headerActions}>
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={() => setIsFavorite(!isFavorite)}
-              >
-                <Icon 
-                  name={isFavorite ? "heart" : "heart-outline"} 
-                  size={24} 
-                  color={isFavorite ? "#ef4444" : "#fff"} 
-                />
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.headerButton}
-                onPress={handleConvite}
-              >
-                <Icon name="share-variant" size={24} color="#fff" />
-              </TouchableOpacity>
+            case 'organizador':
+                return (
+                    <View style={styles.tabContent}>
+                        <View style={styles.organizerCard}>
+                            <LinearGradient
+                                colors={['#4f46e5', '#3b82f6']}
+                                style={styles.organizerAvatar}
+                            >
+                                <Icon name="account" size={40} color="#fff" />
+                            </LinearGradient>
+                            <View style={styles.organizerInfo}>
+                                <Text style={styles.organizerName}>{eventoData.nomeDono}</Text>
+                                <Text style={styles.organizerLabel}>Organizador do Evento</Text>
+                                <View style={styles.organizerStats}>
+                                    <View style={styles.statItem}>
+                                        <Icon name="calendar-check" size={16} color="#10b981" />
+                                        <Text style={styles.statText}>12 eventos</Text>
+                                    </View>
+                                    <View style={styles.statItem}>
+                                        <Icon name="star" size={16} color="#f59e0b" />
+                                        <Text style={styles.statText}>4.8</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={styles.priceCard}>
+                            <Icon name="currency-usd" size={24} color="#10b981" />
+                            <View style={styles.priceInfo}>
+                                <Text style={styles.priceLabel}>Valor do Ingresso</Text>
+                                <Text style={styles.priceValue}>R$ {eventoData.preco.toFixed(2)}</Text>
+                            </View>
+                        </View>
+                    </View>
+                );
+            
+            case 'comentarios':
+                return (
+                    <View style={styles.tabContent}>
+                        <TouchableOpacity 
+                            style={styles.commentsButton}
+                            onPress={() => navigation.navigate('Comentario', {
+                                eventoId: eventoId,
+                                eventoData: eventoData
+                            })}
+                        >
+                            <LinearGradient
+                                colors={['#8b5cf6', '#a855f7']}
+                                style={styles.commentsGradient}
+                            >
+                                <Icon name="comment-multiple" size={24} color="#fff" />
+                                <Text style={styles.commentsButtonText}>Ver Todos os Comentários</Text>
+                                <Icon name="arrow-right" size={20} color="#fff" />
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <View style={styles.quickCommentsPreview}>
+                            <Text style={styles.quickCommentsTitle}>Últimos Comentários</Text>
+                            
+                            <View style={styles.commentPreview}>
+                                <View style={styles.commentHeader}>
+                                    <Icon name="account-circle" size={32} color="#4f46e5" />
+                                    <View style={styles.commentUserInfo}>
+                                        <Text style={styles.commentUser}>Maria Santos</Text>
+                                        <View style={styles.commentRating}>
+                                            {[...Array(5)].map((_, i) => (
+                                                <Icon key={i} name="star" size={12} color="#fbbf24" />
+                                            ))}
+                                        </View>
+                                    </View>
+                                </View>
+                                <Text style={styles.commentText}>Evento incrível! Super recomendo!</Text>
+                            </View>
+
+                            <View style={styles.commentPreview}>
+                                <View style={styles.commentHeader}>
+                                    <Icon name="account-circle" size={32} color="#4f46e5" />
+                                    <View style={styles.commentUserInfo}>
+                                        <Text style={styles.commentUser}>Carlos Lima</Text>
+                                        <View style={styles.commentRating}>
+                                            {[...Array(4)].map((_, i) => (
+                                                <Icon key={i} name="star" size={12} color="#fbbf24" />
+                                            ))}
+                                            <Icon name="star-outline" size={12} color="#d1d5db" />
+                                        </View>
+                                    </View>
+                                </View>
+                                <Text style={styles.commentText}>Muito bom, valeu a pena!</Text>
+                            </View>
+                        </View>
+                    </View>
+                );
+            
+            default:
+                return null;
+        }
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4f46e5" />
+                <Text style={styles.loadingText}>Carregando Evento...</Text>
             </View>
-          </View>
-        </LinearGradient>
+        );
+    }
 
-        <View style={styles.carouselContainer}>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            style={styles.carouselScroll}
-          >
-            {eventoData.imagens.map((uri, index) => (
-              <View key={index} style={styles.carouselItem}>
-                <Image 
-                  source={{ uri }} 
-                  style={styles.eventImage} 
-                  resizeMode="cover"
-                />
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.5)']}
-                  style={styles.imageOverlay}
-                />
-              </View>
-            ))}
-          </ScrollView>
+    return (
+        <>
+            <StatusBar barStyle="light-content" backgroundColor="#4f46e5" />
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+                <LinearGradient colors={['#4f46e5', '#3b82f6']} style={styles.headerGradient}>
+                    <View style={styles.header}>
+                        <TouchableOpacity 
+                            onPress={() => navigation.goBack()}
+                            style={styles.backButton}
+                        >
+                            <Icon name="arrow-left" size={24} color="#fff" />
+                        </TouchableOpacity>
+                        
+                        <View style={styles.headerActions}>
+                            <TouchableOpacity 
+                                style={styles.headerButton}
+                                onPress={() => setIsFavorite(!isFavorite)}
+                            >
+                                <Icon 
+                                    name={isFavorite ? "heart" : "heart-outline"} 
+                                    size={24} 
+                                    color={isFavorite ? "#ef4444" : "#fff"} 
+                                />
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity 
+                                style={styles.headerButton}
+                                onPress={handleConvite}
+                            >
+                                <Icon name="share-variant" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </LinearGradient>
 
-          <View style={styles.pagination}>
-            {eventoData.imagens.map((_, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  index === currentIndex && styles.activeDot
-                ]}
-                onPress={() => scrollToIndex(index)}
-              />
-            ))}
-          </View>
+                <View style={styles.carouselContainer}>
+                    <ScrollView
+                        ref={scrollRef}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onScroll={handleScroll}
+                        scrollEventThrottle={16}
+                        style={styles.carouselScroll}
+                    >
+                        {eventoData.imagens.map((uri, index) => (
+                            <View key={index} style={styles.carouselItem}>
+                                <Image 
+                                    source={{ uri }} 
+                                    style={styles.eventImage} 
+                                    resizeMode="cover"
+                                />
+                                <LinearGradient
+                                    colors={['transparent', 'rgba(0,0,0,0.5)']}
+                                    style={styles.imageOverlay}
+                                />
+                            </View>
+                        ))}
+                    </ScrollView>
 
-          <View style={styles.statusBadge}>
-            <LinearGradient
-              colors={statusEvento === 'Participa' ? ['#4f46e5', '#3b82f6'] : 
-                      statusEvento === 'Pendente' ? ['#f59e0b', '#d97706'] : 
-                      ['#6b7280', '#4b5563']}
-              style={styles.statusGradient}
-            >
-              <Text style={styles.statusText}>{statusEvento === 'Participa' ? 'CONFIRMADO' : statusEvento}</Text>
-            </LinearGradient>
-          </View>
-        </View>
+                    <View style={styles.pagination}>
+                        {eventoData.imagens.map((_, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[
+                                    styles.paginationDot,
+                                    index === currentIndex && styles.activeDot
+                                ]}
+                                onPress={() => scrollToIndex(index)}
+                            />
+                        ))}
+                    </View>
 
-        <Animated.View 
-          style={[
-            styles.eventInfo,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <Text style={styles.eventDate}>{eventoData.data}</Text>
-          <Text style={styles.eventTitle}>{eventoData.nome}</Text>
-          <Text style={styles.eventDescription}>{eventoData.descricao}</Text>
-        </Animated.View>
+                    <View style={styles.statusBadge}>
+                        <LinearGradient
+                            colors={statusEvento === 'Participa' ? ['#4f46e5', '#3b82f6'] : 
+                                     statusEvento === 'Pendente' ? ['#f59e0b', '#d97706'] : 
+                                     ['#6b7280', '#4b5563']}
+                            style={styles.statusGradient}
+                        >
+                            <Text style={styles.statusText}>{statusEvento === 'Participa' ? 'CONFIRMADO' : statusEvento}</Text>
+                        </LinearGradient>
+                    </View>
+                </View>
 
-        <View style={styles.tabsContainer}>
-          {[
-            { key: 'detalhes', label: 'Detalhes', icon: 'information-outline' },
-            { key: 'organizador', label: 'Organizador', icon: 'account-outline' },
-            { key: 'comentarios', label: 'Comentários', icon: 'comment-outline' }
-          ].map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.tab,
-                activeTab === tab.key && styles.activeTab
-              ]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Icon 
-                name={tab.icon} 
-                size={20} 
-                color={activeTab === tab.key ? '#4f46e5' : '#9ca3af'} 
-              />
-              <Text style={[
-                styles.tabLabel,
-                activeTab === tab.key && styles.activeTabLabel
-              ]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Animated.View 
+                    style={[
+                        styles.eventInfo,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }]
+                        }
+                    ]}
+                >
+                    <Text style={styles.eventDate}>{eventoData.data}</Text>
+                    <Text style={styles.eventTitle}>{eventoData.nome}</Text>
+                    <Text style={styles.eventDescription}>{eventoData.descricao}</Text>
+                </Animated.View>
 
-        <Animated.View 
-          style={[
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          {renderTabContent()}
-        </Animated.View>
+                <View style={styles.tabsContainer}>
+                    {[
+                        { key: 'detalhes', label: 'Detalhes', icon: 'information-outline' },
+                        { key: 'organizador', label: 'Organizador', icon: 'account-outline' },
+                        { key: 'comentarios', label: 'Comentários', icon: 'comment-outline' }
+                    ].map((tab) => (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={[
+                                styles.tab,
+                                activeTab === tab.key && styles.activeTab
+                            ]}
+                            onPress={() => setActiveTab(tab.key)}
+                        >
+                            <Icon 
+                                name={tab.icon} 
+                                size={20} 
+                                color={activeTab === tab.key ? '#4f46e5' : '#9ca3af'} 
+                            />
+                            <Text style={[
+                                styles.tabLabel,
+                                activeTab === tab.key && styles.activeTabLabel
+                            ]}>
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
 
-        <View style={styles.actionsContainer}>
-          {renderBotaoAcao()}
-          
-          <View style={styles.secondaryActions}>
-            <TouchableOpacity 
-              style={styles.secondaryButton}
-              onPress={handleConvite}
-            >
-              <LinearGradient
-                colors={['#8b5cf6', '#a855f7']}
-                style={styles.secondaryGradient}
-              >
-                <Icon name="account-plus" size={20} color="#fff" />
-                <Text style={styles.secondaryButtonText}>Convidar</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <Animated.View 
+                    style={[
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }]
+                        }
+                    ]}
+                >
+                    {renderTabContent()}
+                </Animated.View>
 
-            <TouchableOpacity 
-              style={styles.secondaryButton}
-              onPress={() => navigation.navigate('Chat', { eventoId: eventoId })}
-            >
-              <LinearGradient
-                colors={['#06b6d4', '#0891b2']}
-                style={styles.secondaryGradient}
-              >
-                <Icon name="chat" size={20} color="#fff" />
-                <Text style={styles.secondaryButtonText}>Chat</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <View style={styles.actionsContainer}>
+                    {renderBotaoAcao()}
+                    
+                    <View style={styles.secondaryActions}>
+                        <TouchableOpacity 
+                            style={styles.secondaryButton}
+                            onPress={handleConvite}
+                        >
+                            <LinearGradient
+                                colors={['#8b5cf6', '#a855f7']}
+                                style={styles.secondaryGradient}
+                            >
+                                <Icon name="account-plus" size={20} color="#fff" />
+                                <Text style={styles.secondaryButtonText}>Convidar</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
 
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-    </>
-  );
+                        <TouchableOpacity 
+                            style={styles.secondaryButton}
+                            onPress={() => navigation.navigate('Chat', { eventoId: eventoId })}
+                        >
+                            <LinearGradient
+                                colors={['#06b6d4', '#0891b2']}
+                                style={styles.secondaryGradient}
+                            >
+                                <Icon name="chat" size={20} color="#fff" />
+                                <Text style={styles.secondaryButtonText}>Chat</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                <View style={styles.bottomSpacing} />
+            </ScrollView>
+        </>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#4f46e5',
-  },
-  headerGradient: {
-    paddingTop: 50,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  carouselContainer: {
-    position: 'relative',
-    height: 280,
-    marginTop: -20,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    overflow: 'hidden',
-  },
-  carouselScroll: {
-    height: 280,
-  },
-  carouselItem: {
-    width: screenWidth,
-    height: 280,
-    position: 'relative',
-  },
-  eventImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-  },
-  pagination: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: 'white',
-    width: 24,
-  },
-  statusBadge: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  statusGradient: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  eventInfo: {
-    padding: 24,
-    backgroundColor: '#fff',
-    marginTop: -20,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-  },
-  eventDate: {
-    fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  eventTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 12,
-  },
-  eventDescription: {
-    fontSize: 16,
-    color: '#4b5563',
-    lineHeight: 24,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    marginHorizontal: 0,
-    borderRadius: 0,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
-  },
-  activeTab: {
-    borderBottomWidth: 3,
-    borderBottomColor: '#4f46e5',
-  },
-  tabLabel: {
-    fontSize: 14,
-    color: '#9ca3af',
-    fontWeight: '600',
-  },
-  activeTabLabel: {
-    color: '#4f46e5',
-  },
-  tabContent: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#f8fafc',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  infoTextContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  organizerCard: {
-    backgroundColor: '#f8fafc',
-    padding: 20,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  organizerAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  organizerInfo: {
-    flex: 1,
-  },
-  organizerName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  organizerLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 8,
-  },
-  organizerStats: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    fontSize: 12,
-    color: '#4b5563',
-    fontWeight: '600',
-  },
-  priceCard: {
-    backgroundColor: '#f0fdf4',
-    padding: 20,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#dcfce7',
-  },
-  priceInfo: {
-    marginLeft: 16,
-  },
-  priceLabel: {
-    fontSize: 14,
-    color: '#15803d',
-    marginBottom: 4,
-  },
-  priceValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#15803d',
-  },
-  commentsButton: {
-    marginBottom: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  commentsGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    gap: 12,
-  },
-  commentsButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-  },
-  quickCommentsPreview: {
-    backgroundColor: '#f8fafc',
-    padding: 16,
-    borderRadius: 12,
-  },
-  quickCommentsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 16,
-  },
-  commentPreview: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  commentUserInfo: {
-    marginLeft: 12,
-  },
-  commentUser: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 2,
-  },
-  commentRating: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  commentText: {
-    fontSize: 14,
-    color: '#4b5563',
-  },
-  actionsContainer: {
-    padding: 24,
-    backgroundColor: '#fff',
-  },
-  actionButton: {
-    marginBottom: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  gradientButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  secondaryButton: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  secondaryGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  secondaryButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  bottomSpacing: {
-    height: 40,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#f8fafc',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#4f46e5',
+    },
+    headerGradient: {
+        paddingTop: 50,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+    },
+    backButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    headerButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    carouselContainer: {
+        position: 'relative',
+        height: 280,
+        marginTop: -20,
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        overflow: 'hidden',
+    },
+    carouselScroll: {
+        height: 280,
+    },
+    carouselItem: {
+        width: screenWidth,
+        height: 280,
+        position: 'relative',
+    },
+    eventImage: {
+        width: '100%',
+        height: '100%',
+    },
+    imageOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 100,
+    },
+    pagination: {
+        position: 'absolute',
+        bottom: 20,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    paginationDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        marginHorizontal: 4,
+    },
+    activeDot: {
+        backgroundColor: 'white',
+        width: 24,
+    },
+    statusBadge: {
+        position: 'absolute',
+        top: 20,
+        right: 20,
+        borderRadius: 20,
+        overflow: 'hidden',
+    },
+    statusGradient: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    statusText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    eventInfo: {
+        padding: 24,
+        backgroundColor: '#fff',
+        marginTop: -20,
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+    },
+    eventDate: {
+        fontSize: 14,
+        color: '#6b7280',
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    eventTitle: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#1f2937',
+        marginBottom: 12,
+    },
+    eventDescription: {
+        fontSize: 16,
+        color: '#4b5563',
+        lineHeight: 24,
+    },
+    tabsContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        marginHorizontal: 0,
+        borderRadius: 0,
+        borderTopWidth: 1,
+        borderTopColor: '#f3f4f6',
+    },
+    tab: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        gap: 8,
+    },
+    activeTab: {
+        borderBottomWidth: 3,
+        borderBottomColor: '#4f46e5',
+    },
+    tabLabel: {
+        fontSize: 14,
+        color: '#9ca3af',
+        fontWeight: '600',
+    },
+    activeTabLabel: {
+        color: '#4f46e5',
+    },
+    tabContent: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 24,
+        paddingBottom: 24,
+    },
+    infoCard: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#f8fafc',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    infoTextContainer: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    infoLabel: {
+        fontSize: 12,
+        color: '#6b7280',
+        fontWeight: '600',
+        marginBottom: 4,
+    },
+    infoText: {
+        fontSize: 16,
+        color: '#1f2937',
+    },
+    organizerCard: {
+        backgroundColor: '#f8fafc',
+        padding: 20,
+        borderRadius: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    organizerAvatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    organizerInfo: {
+        flex: 1,
+    },
+    organizerName: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1f2937',
+        marginBottom: 4,
+    },
+    organizerLabel: {
+        fontSize: 14,
+        color: '#6b7280',
+        marginBottom: 8,
+    },
+    organizerStats: {
+        flexDirection: 'row',
+        gap: 16,
+    },
+    statItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    statText: {
+        fontSize: 12,
+        color: '#4b5563',
+        fontWeight: '600',
+    },
+    priceCard: {
+        backgroundColor: '#f0fdf4',
+        padding: 20,
+        borderRadius: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#dcfce7',
+    },
+    priceInfo: {
+        marginLeft: 16,
+    },
+    priceLabel: {
+        fontSize: 14,
+        color: '#15803d',
+        marginBottom: 4,
+    },
+    priceValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#15803d',
+    },
+    commentsButton: {
+        marginBottom: 20,
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    commentsGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        gap: 12,
+    },
+    commentsButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+        flex: 1,
+        textAlign: 'center',
+    },
+    quickCommentsPreview: {
+        backgroundColor: '#f8fafc',
+        padding: 16,
+        borderRadius: 12,
+    },
+    quickCommentsTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1f2937',
+        marginBottom: 16,
+    },
+    commentPreview: {
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    commentHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    commentUserInfo: {
+        marginLeft: 12,
+    },
+    commentUser: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1f2937',
+        marginBottom: 2,
+    },
+    commentRating: {
+        flexDirection: 'row',
+        gap: 2,
+    },
+    commentText: {
+        fontSize: 14,
+        color: '#4b5563',
+    },
+    actionsContainer: {
+        padding: 24,
+        backgroundColor: '#fff',
+    },
+    actionButton: {
+        marginBottom: 16,
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    gradientButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        gap: 12,
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    secondaryActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    secondaryButton: {
+        flex: 1,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    secondaryGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        gap: 8,
+    },
+    secondaryButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    bottomSpacing: {
+        height: 40,
+    },
 });
